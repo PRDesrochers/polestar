@@ -1261,18 +1261,21 @@ test('#246: no NPC or object goal is on a neighbouring zone\'s map where the two
 // south-west of the bow, to where QuestieDB 1.0.5 had it; 1.0.6 moved it to
 // 59.4,56.4, where the player found it. A quest item that lies on the ground
 // at a few fixed spots is collected where one of them is: the arrow leads
-// within 1 map unit of its object's spawn.
+// within 50 yd of its object's spawn. Goals and spawns are compared in world
+// yards, since either can be on the Era or the live map frame: Duskwood's
+// silk thread was typed in live coordinates and read as Era, ~190 yd off.
 const AWAY_FROM_ITS_OBJECTS = new Set([
 	// Fish from pools: the schools drift along the shore, and the step points at a stretch of it.
 	'forever/professions/fishing.guide 16968',
 	'forever/professions/fishing.guide 16969',
 	'forever/professions/fishing.guide 16970',
-	// The data has the book at 14.0,24.2 (pfQuest and QuestieDB agree); the guide says the
-	// Terrordale inn at 17.4,31.1. Not checked in game yet; left for its own fix.
-	'forever/horde/50-60/01-un-goro-crater.guide 15884',
 ]);
 test("#289: a quest item picked up from objects is collected at one of the objects' spawns", { skip }, () => {
 	data = data || loadData(DATA);
+	const world = (map, x, y, f) => {
+		const fr = (f === 'e' ? data.mapFrames.era : data.mapFrames.forever || {})[map] || data.eraFrame(map);
+		return fr && { c: fr.c, wx: fr.top + ((fr.bottom - fr.top) * y) / 100, wy: fr.left + ((fr.right - fr.left) * x) / 100 };
+	};
 	const offenders = [];
 	for (const guide of allGuides()) {
 		for (const { step, goal } of goals(guide)) {
@@ -1281,10 +1284,11 @@ test("#289: a quest item picked up from objects is collected at one of the objec
 			if (!item || !item.questItem || !item.drops) continue;
 			const objects = Object.keys(item.drops.object || {});
 			if (!objects.length || Object.keys(item.drops.npc || {}).length) continue;
-			const pts = objects.flatMap((id) => data.spawns('object', Number(id)).filter((s) => s.map === goal.map).flatMap((s) => s.pts));
-			if (!pts.length) continue;
-			const near = Math.min(...[goal, ...(goal.spots || [])].flatMap((g) => pts.map((p) => Math.hypot(p[0] - g.x, p[1] - g.y))));
-			if (near > 1 && !AWAY_FROM_ITS_OBJECTS.has(`${guide} ${goal.item}`)) offenders.push(`${guide} collect ${goal.item} @${goal.x},${goal.y} (step ${step.title}) is ${near.toFixed(2)} from its objects`);
+			const pts = objects.flatMap((id) => data.spawns('object', Number(id)).filter((s) => s.map === goal.map).flatMap((s) => s.pts.map((p) => world(s.map, p[0], p[1], s.f)))).filter(Boolean);
+			const at = [goal, ...(goal.spots || [])].map((g) => world(goal.map, g.x, g.y, goal.f)).filter(Boolean);
+			if (!pts.length || !at.length) continue;
+			const near = Math.min(...at.flatMap((g) => pts.filter((p) => p.c === g.c).map((p) => Math.hypot(p.wx - g.wx, p.wy - g.wy))));
+			if (near > 50 && !AWAY_FROM_ITS_OBJECTS.has(`${guide} ${goal.item}`)) offenders.push(`${guide} collect ${goal.item} @${goal.x},${goal.y} (step ${step.title}) is ${Math.round(near)} yd from its objects`);
 		}
 	}
 	assert.deepEqual(offenders, [], 'quest items collected away from the objects that hold them');
