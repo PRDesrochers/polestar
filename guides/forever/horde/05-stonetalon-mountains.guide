@@ -82,6 +82,9 @@ step Kadrak
   tip From the Crossroads follow the road north. Kadrak stands on the watch tower of the Mor'shan Rampart where the road enters Ashenvale. Open the Bundle of Reports he gives you.
   turnin 6541                         -- Kadrak
   accept 6543
+  # Each scout trades his update for a Warsong Report, and the reports are
+  # only in your bags once the Bundle of Reports is opened (#278).
+  collect 16746 x3                    -- Warsong Report, from the Bundle of Reports
 
 step Warsong Scout
   zone Ashenvale

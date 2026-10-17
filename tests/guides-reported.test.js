@@ -1210,6 +1210,17 @@ test('#246: every goal with Tirion leads to Tirion Fordring at his hut, never to
 	}
 });
 
+// --- Stonetalon & Ashenvale (#278): each Warsong scout trades his update for a
+// Warsong Report, which is only in the bags once Kadrak's Bundle of Reports is opened.
+test('forever/horde/05-stonetalon-mountains.guide: #278: the Bundle of Reports is opened at Kadrak, before the Warsong Scout', { skip }, () => {
+	const list = goals('forever/horde/05-stonetalon-mountains.guide');
+	const reports = at(list, 'the three Warsong Reports', (g) => g.t === 'collect' && g.item === 16746 && !g.quest);
+	assert.equal(list[reports].goal.count, 3, 'one report for each scout');
+	assert.ok(at(list, 'accept 6543 (The Warsong Reports)', is('accept', 6543)) < reports, 'the bundle comes with The Warsong Reports');
+	assert.equal(list[reports].step, list[at(list, 'accept 6543', is('accept', 6543))].step, 'opened on the Kadrak step');
+	for (const update of [16764, 16765, 16763]) assert.ok(reports < at(list, `update ${update}`, (g) => g.t === 'collect' && g.item === update), `the reports are in the bags before update ${update}`);
+});
+
 // The same pattern everywhere: where the zone maps overlap, the data spawns an
 // NPC or object at one spot on both maps, and the step's zone picks the map.
 // A goal on the map of a zone Wowhead Forever does not list it in, while the
