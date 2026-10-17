@@ -1221,7 +1221,7 @@ do
 						{ t = "buy", npc = 1302, npcName = "Bernard Gump", item = 3421, itemName = "Simple Wildflowers", count = 1, map = 1453, x = 69.24, y = 71.84, z = 98.9, optional = true, note = "{item:3421}: {npc:1302}" },
 						{ t = "buy", npc = 1313, npcName = "Maria Lumere", item = 3372, itemName = "Leaded Vial", count = 1, map = 1453, x = 55.9, y = 85.64, z = 98.4, optional = true, note = "{item:3372}: {npc:1313}, Alchemy Supplies" },
 						{ t = "buy", npc = 5519, npcName = "Billibub Cogspinner", item = 4371, itemName = "Bronze Tube", count = 1, map = 1453, x = 62.43, y = 29.9, z = 95.4, optional = true, note = "{item:4371}: {npc:5519}, {object:28027}" },
-						{ t = "collect", quest = 2609, title = "The Touch of Zanzil", item = 8431, itemName = "Spool of Light Chartreuse Silk Thread", count = 1, oi = 4, map = 1453, x = 50.6, y = 60.1, f = "e", optional = true, from = "Spool of Light Chartreuse Silk Thread", fromKind = "object", fromId = 140911 },
+						{ t = "collect", quest = 2609, title = "The Touch of Zanzil", item = 8431, itemName = "Spool of Light Chartreuse Silk Thread", count = 1, oi = 4, map = 1453, x = 50.6, y = 60.1, optional = true, from = "Spool of Light Chartreuse Silk Thread", fromKind = "object", fromId = 140911 },
 						{ t = "turnin", quest = 2609, title = "The Touch of Zanzil", npc = 7207, npcName = "Doc Mixilpixil", map = 1453, x = 80.06, y = 69.9, z = 95.1, optional = true, note = "{npc:7207}: {item:8432}" },
 					},
 				},
