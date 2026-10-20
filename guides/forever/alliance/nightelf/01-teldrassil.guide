@@ -442,13 +442,13 @@ step Dolanaar again
 step Taming the Beast
   only Hunter
   tip Each of Dazalar's quests hands you a Taming Rod: use it on the beast he names, then bring the rod back to him in Dolanaar. Webwood Lurkers creep around the village, Nightsaber Stalkers and Strigid Screechers roam the woods south of it.
-  kill 1998 quest 6063.1                      -- Webwood Lurker: tame it with the Taming Rod
+  kill 1998 quest 6063.1 "Tame Webwood Lurker" -- Webwood Lurker: tame it with the Taming Rod
   turnin 6063                                 -- Dazalar
   accept 6101
-  kill 2043 quest 6101.1                      -- Nightsaber Stalker: tame it with the Taming Rod
+  kill 2043 quest 6101.1 "Tame Nightsaber Stalker" -- Nightsaber Stalker: tame it with the Taming Rod
   turnin 6101
   accept 6102
-  kill 1996 quest 6102.1                      -- Strigid Screecher: tame it with the Taming Rod
+  kill 1996 quest 6102.1 "Tame Strigid Screecher" -- Strigid Screecher: tame it with the Taming Rod
   turnin 6102                                 -- Tame Beast
   accept 6103                                 -- Jocaste in Darnassus takes it
 

@@ -537,13 +537,13 @@ step Taming the Beast
   only Hunter
   tip Josephine Carson stands with the Goldshire trainers. Each of her quests hands you a Taming Rod: use it on the beast she names, then bring the rod back to her. Rockhide Boars and Young Forest Bears roam the hills south of the Maclure Vineyards, Gray Forest Wolves the woods east of Crystal Lake.
   accept 94792                                -- Josephine Carson
-  kill 524 quest 94792.1                      -- Rockhide Boar: tame it with the Taming Rod
+  kill 524 quest 94792.1 "Tame Rockhide Boar" -- Rockhide Boar: tame it with the Taming Rod
   turnin 94792
   accept 94863
-  kill 1922 quest 94863.1                     -- Gray Forest Wolf: tame it with the Taming Rod
+  kill 1922 quest 94863.1 "Tame Gray Forest Wolf" -- Gray Forest Wolf: tame it with the Taming Rod
   turnin 94863
   accept 94864
-  kill 822 quest 94864.1                      -- Young Forest Bear: tame it with the Taming Rod
+  kill 822 quest 94864.1 "Tame Young Forest Bear" -- Young Forest Bear: tame it with the Taming Rod
   turnin 94864                                -- Tame Beast
   accept 94793
   turnin 94793                                -- Isaac Chan, beside her: Beast Training

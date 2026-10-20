@@ -425,6 +425,36 @@ test(`EpicTibbles's report (#532): an objective that is talking to someone reads
 	}
 });
 
+test(`EpicTibbles's report (#565): a Hunter's Taming the Beast beast reads "Tame", not "Kill", in every guide`, { skip }, () => {
+	// The data counts the tame as kill credit on the beast, so the goal stays
+	// a `kill` tracking the objective; its text is what the guide window shows.
+	data = data || loadData(DATA);
+	const tames = [
+		[TELDRASSIL, 6063, 'Webwood Lurker'],
+		[DUN_MOROGH, 6064, 'Large Crag Boar'],
+		[ELWYNN, 94792, 'Rockhide Boar'],
+		['forever/alliance/skyborne/01-zephras-isle.guide', 94978, 'Windsong Crawler'],
+		[MULGORE, 6061, 'Adult Plainstrider'],
+		[DUROTAR, 6062, 'Dire Mottled Boar'],
+	];
+	for (const [guide, quest, name] of tames) {
+		const { goal } = goals(guide)[at(goals(guide), `${quest}.1 (${name})`, (g) => g.t === 'kill' && g.quest === quest && g.oi === 1)];
+		assert.equal(goal.text, `Tame ${name}`, `${guide}: ${name}`);
+	}
+	// Every kill goal on a Taming Rod objective says so itself.
+	let seen = 0;
+	for (const guide of allGuides()) {
+		for (const { goal } of goals(guide)) {
+			const q = goal.t === 'kill' && goal.quest && data.quests[goal.quest];
+			if (q && /Taming Rod to tame/.test(q.objectiveText || '')) {
+				assert.match(goal.text || '', /^Tame /, `${guide}: ${goal.quest}.${goal.oi}`);
+				seen++;
+			}
+		}
+	}
+	assert.ok(seen >= 21, `the seven Hunter starting guides' 21 tames (found ${seen})`);
+});
+
 test(`${DUN_MOROGH}: thmastin's report: The Reports is taken from Senir with Frostmane Hold and handed to the senator on the way to the tram`, { skip }, () => {
 	const list = goals(DUN_MOROGH);
 	const accept = at(list, 'accept 291 (The Reports)', is('accept', 291));
