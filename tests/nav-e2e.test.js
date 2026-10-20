@@ -1098,3 +1098,46 @@ test('#234 floor: off the Undercity\'s south lift, indoors, the walk to the plun
 	assert.ok(Math.abs(out.walked.z - -62.2) <= 3, `searched from the lower level (${out.walked.z})`);
 	assert.ok(out.walked.top < -20, `the drawn line's first 60 yd stay down there (highest ${out.walked.top})`);
 });
+
+// #568 (EpicTibbles), Teldrassil, Alliance: from Dolanaar (1438 56.73,61.90)
+// to the fishing trainer in Darnassus (1457 47.89,56.65) the route walked down
+// to Rut'theran Village and took the portal up. No walk joins the top of
+// Teldrassil to Rut'theran on the maps (the engine answers "unreachable"), but
+// the walk to the portal was priced straight x1.25, under the engine's 1650 yd
+// in through Darnassus' gate. Once the engine finds no walk to the portal's
+// entrance, the route goes in through the gate; from Rut'theran itself (off the
+// boat) the portal is still the way up.
+test('#568: from Dolanaar to the Darnassus fishing trainer the route walks in through the gate, not down to the Rut\'theran portal; from Rut\'theran it takes the portal', { skip }, (t) => {
+	const out = run(t, `
+		w.faction = "Alliance"
+		local function route(map, x, y)
+			local c, wx, wy = C.MapToWorld(map, x, y, "e")
+			place(map, wx, wy)
+			N.SetTarget(1457, 47.89, 56.65, "Fishing trainer", "e")
+			for _ = 1, 400 do stub.advance(0.05); aim() end
+			local legs, ci = N.GetRoute()
+			local r = { kinds = {}, portal = false }
+			for i = ci, #legs do
+				local l = legs[i]
+				r.kinds[#r.kinds + 1] = l.kind
+				if l.kind == "portal" then r.portal = l.transport.id end
+			end
+			local last = legs[#legs].to
+			local _, tx, ty = N.GetTargetWorld()
+			r.endGap = dist(last.wx, last.wy, tx, ty)
+			r.unreachable = 0
+			for _, f in ipairs(finds) do
+				if f.cost == "unreachable" and dist(f.to[1], f.to[2], 8799.4, 969.8) < 1 then r.unreachable = r.unreachable + 1 end
+			end
+			N.ClearTarget()
+			for _ = 1, 5 do stub.advance(0.05) end
+			finds = {}
+			return r
+		end
+		emit({ dolanaar = route(1438, 56.73, 61.90), ruttheran = route(1438, 55.5, 91.0) })`, { shipped: true });
+	assert.ok(out.dolanaar.unreachable > 0, 'the engine finds no walk from Dolanaar to the Rut\'theran portal');
+	assert.equal(out.dolanaar.portal, false, `from Dolanaar: ${out.dolanaar.kinds.join(', ')}`);
+	assert.deepEqual([...new Set(out.dolanaar.kinds)], ['walk'], 'it walks all the way');
+	assert.ok(out.dolanaar.endGap < 1, 'to the trainer');
+	assert.equal(out.ruttheran.portal, 'portal-darnassus', `from Rut'theran: ${out.ruttheran.kinds.join(', ')}`);
+});
