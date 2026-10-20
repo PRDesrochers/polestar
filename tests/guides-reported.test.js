@@ -2230,3 +2230,58 @@ test('forever/alliance/03-darkshore.guide: Deadshot\'s report (#560): How Big a 
 	assert.equal(goal.map, 1439, 'the goal is on Darkshore');
 	assert.ok(yards(goal, completed) <= 200, `the arrow at ${goal.x},${goal.y} is by the camp the report completed at, not ${Math.round(yards(goal, completed))} yd off`);
 });
+
+// dgc1980 (#563), Alliance: on Cozy Sleeping Bag's Stonetalon step the arrow
+// pointed straight from the Barrens (1413 42.08,32.49) at the path into the
+// Stonetalon hills, a line through Honor's Stand, the Horde post on the road
+// west. Alliance now go by the reporter's safe spot north of it
+// (40.20,24.88; 1413's Era and live frames are the same). The post is the
+// shipped walking maps' hostile hub, so the straight arrow of every leg, from
+// the report's spot to the safe spot and on to the path, keeps out of it.
+
+test("forever/miscellaneous/cozy-sleeping-bag.guide: dgc1980's report (#563): Alliance go round Honor's Stand on the way to Stonetalon, Horde go straight", { skip }, () => {
+	const list = goals('forever/miscellaneous/cozy-sleeping-bag.guide');
+	const hills = at(list, 'the path into the hills', (g) => g.t === 'goto' && g.map === 1442);
+	const step = list[hills].s;
+	const before = list.filter(({ s, goal }, i) => s === step && i < hills && goal.t === 'goto');
+	const alliance = before.filter(({ goal }) => !goal.only || (goal.only.factions || []).includes('Alliance'));
+	const horde = before.filter(({ goal }) => !goal.only || (goal.only.factions || []).includes('Horde'));
+	const [hubs] = runAddon({
+		stubs: ['stub_encoding.lua'],
+		addons: ['Polestar_Nav'],
+		script: `
+local out = {}
+for _, h in ipairs(PolestarPathData[1].hubs) do
+	if h.id == "horde-honors-stand" then
+		for i, d in ipairs(h.disks) do out[i] = { d[1], d[2], d[3] } end
+	end
+end
+emit(out)`,
+	}).emitted;
+	assert.ok(hubs.length > 0, "the walking maps know Honor's Stand");
+	// A map point in the world frame the maps use: x north, y west.
+	const world = ({ map, x, y }) => {
+		const f = data.eraFrame(map);
+		return { x: f.top + ((f.bottom - f.top) * y) / 100, y: f.left + ((f.right - f.left) * x) / 100 };
+	};
+	// How far (yd) the line from a to b stays outside the hub's disks.
+	const clear = (a, b) => {
+		const [p, q] = [world(a), world(b)];
+		const dx = q.x - p.x;
+		const dy = q.y - p.y;
+		const l2 = dx * dx + dy * dy;
+		return Math.min(...hubs.map(([x, y, r]) => {
+			const t = Math.max(0, Math.min(1, ((x - p.x) * dx + (y - p.y) * dy) / l2));
+			return Math.hypot(p.x + dx * t - x, p.y + dy * t - y) - r;
+		}));
+	};
+	const stops = [{ map: 1413, x: 42.08, y: 32.49 }, ...alliance.map(({ goal }) => goal), list[hills].goal];
+	for (let i = 1; i < stops.length; i++) {
+		const [a, b] = [stops[i - 1], stops[i]];
+		const off = clear(a, b);
+		assert.ok(off > 50, `the arrow from ${a.x},${a.y} to ${b.x},${b.y} (map ${b.map}) passes ${Math.round(off)} yd outside Honor's Stand`);
+	}
+	assert.equal(alliance.length, 1, 'Alliance get one waypoint before the path');
+	assert.ok(yards(alliance[0].goal, { map: 1413, x: 40.2, y: 24.88 }) <= 30, "it is the reporter's safe spot");
+	assert.equal(horde.length, 0, 'Horde get none');
+});
