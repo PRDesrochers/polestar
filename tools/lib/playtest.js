@@ -536,19 +536,25 @@ local E, w = Polestar.Engine, stub.world
 -- SIM_GUIDE (playGuide): the guide that was set, which the engine may already
 -- have left for the next one; else the open guide.
 local G = SIM_GUIDE or E.GetGuide()
-local objs = {}
+-- Each quest's log lines: the count its goals need, and the kind the game
+-- gives the line (a collect's is an item's, which the engine reads from the
+-- log rather than the bags).
+local objs, kinds = {}, {}
+local KIND = { kill = "monster", collect = "item", interact = "object" }
 for _, s in ipairs(G.steps) do
 	for _, g in ipairs(s.goals) do
 		if g.quest and g.oi then
 			objs[g.quest] = objs[g.quest] or {}
 			objs[g.quest][g.oi] = math.max(objs[g.quest][g.oi] or 1, g.count or 1)
+			kinds[g.quest] = kinds[g.quest] or {}
+			kinds[g.quest][g.oi] = kinds[g.quest][g.oi] or KIND[g.t]
 		end
 	end
 end
 local function objectivesFor(q)
 	local list, o, n = {}, objs[q], 0
 	if o then for i in pairs(o) do if i > n then n = i end end end
-	for i = 1, n do list[i] = { required = o[i] or 1 } end
+	for i = 1, n do list[i] = { required = o[i] or 1, type = kinds[q][i] or "event" } end
 	return list
 end
 local function ensureSkill(r, line)
