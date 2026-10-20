@@ -2355,3 +2355,12 @@ emit(out)`,
 	assert.ok(yards(alliance[0].goal, { map: 1413, x: 40.2, y: 24.88 }) <= 30, "it is the reporter's safe spot");
 	assert.equal(horde.length, 0, 'Horde get none');
 });
+
+test(`${TIRISFAL}: Hotline's report (#576): every hearth to Brill says where to walk when the Hearthstone is on cooldown`, { skip }, () => {
+	const hearths = goals(TIRISFAL).filter(({ goal }) => goal.t === 'hearth');
+	assert.equal(hearths.length, 3, 'three hearths to Brill');
+	for (const { goal, s } of hearths) {
+		assert.equal(goal.area, 2119, `step ${s}: walking into the Gallows' End Tavern also checks it off`);
+		assert.match(goal.note || '', /^Hearthstone on cooldown\?.*\bBrill\b/, `step ${s}: the walking fallback`);
+	}
+});

@@ -312,7 +312,7 @@ step Calvin Montague
   turnin 590
 
 step Hearth to Brill
-  hearth "Gallows' End Tavern"
+  hearth "Gallows' End Tavern"               -- Hearthstone on cooldown? Walk east to the Gallows' End Tavern in Brill.
 
 # ---------------------------------------------------------------- Brill and the north
 
@@ -413,7 +413,7 @@ step Shadowvale
   collect 268801 quest 95314.1
 
 step Hearth to Brill
-  hearth "Gallows' End Tavern"
+  hearth "Gallows' End Tavern"               -- Hearthstone on cooldown? Walk east to the Gallows' End Tavern in Brill.
 
 step Brill
   turnin 426                          -- Deathguard Dillinger
@@ -566,7 +566,7 @@ step Paladin: Whispering Forest
   turnin 99152                        -- Hilda the Breaker
 
 step Hearth to Brill
-  hearth "Gallows' End Tavern"
+  hearth "Gallows' End Tavern"               -- Hearthstone on cooldown? Walk east to the Gallows' End Tavern in Brill.
 
 step The Undercity
   only Warlock,Priest,Mage
