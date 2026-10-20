@@ -1363,6 +1363,24 @@ local function objectiveState(goal)
 	return finished and true or false, cur, max
 end
 
+-- A quest's collect whose item the quest log does not count, with the quest
+-- in the log: no line for it, or its line is not an item's. The item is one
+-- the quest needs in the bags to do what the log counts (Sunscale Feathers,
+-- used on the three Scytheclaw nests the log lists, #538); the bags count
+-- it. (On Own: the main chunk is at 200 locals.)
+function Own.bagsCount(goal)
+	if not goal.item then return false end
+	local C = Compat()
+	local q = goal.quest
+	if not C.IsOnQuest(q) or C.IsQuestReadyForTurnIn(q) then return false end
+	local objs = C.GetQuestObjectives(q)
+	if not objs then return false end
+	local line = Own.objectiveLine(goal, objs)
+	local o = line and objs[line]
+	if not o then return true end
+	return o.type ~= "" and o.type ~= "item"
+end
+
 -- A `complete` goal's quest in the log: its objectives' counts summed, each
 -- capped at what it needs ("Plainstrider Meat 3/7, Feathers 5/7": 8/14), and
 -- with `open`, when it has more than one, the open ones in the game's words
@@ -1484,7 +1502,10 @@ goalDone = function(s, g, goal)
 		if goal.quest then return objectiveState(goal) end
 		return false
 	elseif t == "collect" then
-		if goal.quest then return objectiveState(goal) end
+		if goal.quest then
+			if Own.bagsCount(goal) then return countState(goal) end
+			return objectiveState(goal)
+		end
 		if Own.starterTaken(s, g, goal) then return true end
 		return countState(goal)
 	elseif t == "buy" then

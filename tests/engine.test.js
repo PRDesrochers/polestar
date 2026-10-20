@@ -1042,6 +1042,62 @@ test('talk, sethome, getfp, fly, vendor, buy, collect and hearth complete from i
 	]);
 });
 
+// #538: Sunscale Feathers are not in The Angry Scytheclaws' log: its lines
+// are the three nests the feathers are used on. A collect the log does not
+// count (its line is not an item's, or it has none) counts the bags.
+const FEATHERS = `
+	Polestar.RegisterGuide({ id = "test/feathers", pack = "test", title = "Feathers", minLevel = 1, maxLevel = 30, steps = {
+		{ goals = { { t = "collect", quest = 905, title = "The Angry Scytheclaws", item = 5165, itemName = "Sunscale Feather", count = 2, oi = 1, map = 1429, x = 50, y = 50 } } },
+		{ goals = { { t = "collect", quest = 905, title = "The Angry Scytheclaws", item = 5166, itemName = "Other Feather", count = 1, map = 1429, x = 50, y = 50 } } },
+		{ goals = { { t = "level", level = 99 } } },
+	} })
+`;
+const NESTS = `w.onQuest(905, {
+	{ text = "Visit Blue Raptor Nest", required = 1, type = "event" },
+	{ text = "Visit Yellow Raptor Nest", required = 1, type = "event" },
+	{ text = "Visit Red Raptor Nest", required = 1, type = "event" },
+})`;
+
+test('a quest\'s collect the quest log does not count counts the bags (#538)', () => {
+	const [out] = run({
+		guides: FEATHERS,
+		before: NESTS,
+		script: `
+			local w = stub.world
+			E.SetGuide("test/feathers"); flush()
+			local function goal(s)
+				local g = E.GetStepView(s).goals[1]
+				return { E.GetStepIndex(), g.status, g.progress and g.progress.cur or false, g.progress and g.progress.max or false }
+			end
+			local r = { none = goal(1) }
+			w.addItem(5165, 1); flush(); r.one = goal(1)
+			w.addItem(5165, 1); flush(); r.two = goal(1)
+			w.addItem(5166, 1); flush(); r.noLine = goal(2)
+			emit(r)
+		`,
+	});
+	assert.deepEqual(out.none, [1, 'active', 0, 2], 'not a nest\'s 0/1: the bags\' 0/2');
+	assert.deepEqual(out.one, [1, 'active', 1, 2]);
+	assert.deepEqual(out.two, [2, 'done', 2, 2], 'both held: on to the next step');
+	assert.deepEqual(out.noLine, [3, 'done', 1, 1], 'no line for the item: the bags too');
+});
+
+test('a quest\'s collect the quest log counts reads the log, not the bags', () => {
+	const [out] = run({
+		guides: FEATHERS.replace(/\n.*item = 5166.*/, ''),
+		before: `w.onQuest(905, { { text = "Sunscale Feather: 0/2", required = 2, type = "item" } })`,
+		script: `
+			local w = stub.world
+			E.SetGuide("test/feathers")
+			w.addItem(5165, 2); flush()
+			local before = { E.GetStepIndex(), E.GetStepView(1).goals[1].progress.cur }
+			w.progress(905, 1, 2); flush()
+			emit({ before = before, after = E.GetStepIndex() })
+		`,
+	});
+	assert.deepEqual(out, { before: [1, 0], after: 2 });
+});
+
 test('a step that hearths and then flies completes when the flight lands: the hearth counts as done once a later goal is', () => {
 	const guide = `
 		Polestar.RegisterGuide({ id = "test/travel", pack = "test", title = "Travel", minLevel = 1, maxLevel = 10, steps = {
