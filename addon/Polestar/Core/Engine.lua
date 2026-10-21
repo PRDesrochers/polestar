@@ -3626,15 +3626,17 @@ function ns.RegisterClassTrainerIds(byClass)
 end
 
 -- Where the guide goes next: the first open goal with coordinates of each of
--- the next ROUTE_STEPS applicable steps, in order.
+-- the next ROUTE_STEPS applicable steps from the live step (not the one on
+-- screen), in order.
 -- (On Own: the main chunk is at 200 locals.)
 Own.ROUTE_STEPS = 8
 Own.ROUTE_TIE = 15 -- seconds of detour that count as no difference
 function Own.routePoints()
 	local pts = {}
-	if not (guide and current) then return pts end
+	local from = computed or current
+	if not (guide and from) then return pts end
 	local seen = 0
-	for s = current, #guide.steps do
+	for s = from, #guide.steps do
 		local step = guide.steps[s]
 		if stepApplies(step) then
 			for g, goal in ipairs(step.goals) do
@@ -3727,11 +3729,13 @@ function Engine.IsClassTrainer(npc)
 	return classes[player.class] == true
 end
 
--- The active guide sends the character to their class trainer soon.
+-- The active guide sends the character to their class trainer soon: within
+-- TRAIN_LOOKAHEAD steps of the live step, whichever step is on screen.
 local function guideTrainsSoon()
-	if not (guide and current) then return false end
+	local from = computed or current
+	if not (guide and from) then return false end
 	local seen = 0
-	for s = current, #guide.steps do
+	for s = from, #guide.steps do
 		local step = guide.steps[s]
 		if stepApplies(step) then
 			for _, goal in ipairs(step.goals) do

@@ -70,6 +70,16 @@ Polestar.RegisterGuide({ id = "test/cave-direct", pack = "test", title = "Cave, 
 	{ goals = { { t = "goto", map = 1426, x = 47.2, y = 52.4 } } },
 	{ goals = { { t = "level", level = 20 } } },
 } })
+-- The trainer is the sixth step: past the reminder's reach from step 1.
+Polestar.RegisterGuide({ id = "test/trains-far", pack = "test", title = "Trains far", faction = "Horde", minLevel = 10, maxLevel = 20, steps = {
+	{ goals = { { t = "goto", map = 1413, x = 20, y = 20 } } },
+	{ goals = { { t = "goto", map = 1413, x = 21, y = 20 } } },
+	{ goals = { { t = "goto", map = 1413, x = 22, y = 20 } } },
+	{ goals = { { t = "goto", map = 1413, x = 23, y = 20 } } },
+	{ goals = { { t = "goto", map = 1413, x = 24, y = 20 } } },
+	{ goals = { { t = "train", class = true, candidates = { { npc = 3353, npcName = "Grezz Ragefist", map = 1454, x = 79.8, y = 31.4, f = "e", faction = "H", classes = { "WARRIOR" } } } } } },
+	{ goals = { { t = "level", level = 20 } } },
+} })
 `;
 
 function run({ saved, pre = '', script, addons = [CORE] }) {
@@ -217,6 +227,22 @@ test('a stop in Anvilmar on the way out of the cave keeps the reminder there; wi
 	// 257446 Teo Hammerstorm (Anvilmar), 258113 Ingrid Dunwald (Kharanos).
 	assert.equal(pick('test/cave-anvilmar'), 257446);
 	assert.equal(pick('test/cave-direct'), 258113);
+});
+
+test('the reminder follows the live step, not the step on screen (#664)', () => {
+	// Trained at 12 and at 12 now: nothing due until the level-up to 14 below.
+	const levelUp = (guide, view) => run({
+		saved: { Polestar: `PolestarCharDB = { schema = 1, classTrainLevel = 12, tabs = { "${guide}" }, activeTab = 1 }` },
+		script: `stub.advance(0.5)
+			Polestar.Engine.Goto(${view}); stub.advance(0.5)
+			stub.world.level = 14
+			Polestar.Engine.RequestUpdate(); stub.advance(0.5)
+			emit({ due = #DUE, step = Polestar.Engine.GetStepIndex() })`,
+	})[0];
+	// Live step 1, trainer at 6: out of reach, so it is due, though step 6 is on screen.
+	assert.deepEqual(levelUp('test/trains-far', 6), { due: 1, step: 6 });
+	// Live step 1, trainer at 2: within reach, so held back, though step 3 is on screen.
+	assert.deepEqual(levelUp('test/trains', 3), { due: 0, step: 3 });
 });
 
 test('a class trainer is one the registry holds for the character\'s class; riding trainers and other classes\' are not', () => {
