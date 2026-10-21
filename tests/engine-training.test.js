@@ -245,6 +245,20 @@ test('the reminder follows the live step, not the step on screen (#664)', () => 
 	assert.deepEqual(levelUp('test/trains', 3), { due: 0, step: 3 });
 });
 
+test('the guide\'s next training stop counts applicable steps from the live step, not the step on screen (#668)', () => {
+	const stop = (guide, view) => run({
+		saved: { Polestar: `PolestarCharDB = { schema = 1, classTrainLevel = 12, tabs = { "${guide}" }, activeTab = 1 }` },
+		script: `stub.advance(0.5)
+			Polestar.Engine.Goto(${view}); stub.advance(0.5)
+			emit({ Polestar.Engine.GuideTrainStop() })`,
+	})[0];
+	// The trainer is the sixth step, counting the live one.
+	assert.deepEqual(stop('test/trains-far', 6), [6]);
+	assert.deepEqual(stop('test/trains', 3), [2]);
+	// The Barrens trains only Orcs and Trolls: nothing ahead for an Undead.
+	assert.deepEqual(stop('test/barrens', 1), [false]);
+});
+
 test('a class trainer is one the registry holds for the character\'s class; riding trainers and other classes\' are not', () => {
 	const [out] = run({
 		script: `
