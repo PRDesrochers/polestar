@@ -3770,23 +3770,33 @@ function Engine.IsClassTrainer(npc)
 	return classes[player.class] == true
 end
 
--- The active guide sends the character to their class trainer soon: within
--- TRAIN_LOOKAHEAD steps of the live step, whichever step is on screen.
-local function guideTrainsSoon()
+-- The active guide's next class training stop from the live step, whichever
+-- step is on screen: its place among the applicable steps (the live step is
+-- 1) and the step's title. False when the guide trains the class nowhere
+-- ahead; nil with no guide.
+function Engine.GuideTrainStop()
 	local from = computed or current
-	if not (guide and from) then return false end
+	if not (guide and from) then return nil end
 	local seen = 0
 	for s = from, #guide.steps do
 		local step = guide.steps[s]
 		if stepApplies(step) then
-			for _, goal in ipairs(step.goals) do
-				if goal.t == "train" and goalApplies(goal) and (goal.class or (goal.npc and trainerClasses[goal.npc])) then return true end
-			end
 			seen = seen + 1
-			if seen >= TRAIN_LOOKAHEAD then break end
+			for _, goal in ipairs(step.goals) do
+				if goal.t == "train" and goalApplies(goal) and (goal.class or (goal.npc and trainerClasses[goal.npc])) then
+					return seen, step.title
+				end
+			end
 		end
 	end
 	return false
+end
+
+-- The active guide sends the character to their class trainer soon: within
+-- TRAIN_LOOKAHEAD steps of the live step.
+local function guideTrainsSoon()
+	local n = Engine.GuideTrainStop()
+	return n and n <= TRAIN_LOOKAHEAD or false
 end
 
 local trainChecked -- the level last checked this session
