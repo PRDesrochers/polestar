@@ -8,6 +8,8 @@ const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const { instanceFacts, buildInstances, chooseEntrance, loadEntranceTable } = require('../tools/lib/codex/instances');
 const { emitPack } = require('../tools/lib/codex/pack');
+const { runAddon } = require('./helpers/lua');
+const { writeCodexPack } = require('./helpers/codex');
 
 // Westfall's live frame: world x north / y west -> map percent.
 const WESTFALL = { c: 0, left: 2000, right: -1000, top: -9000, bottom: -12000 };
@@ -62,4 +64,44 @@ test('pack: an approximate entrance carries its flag', () => {
 	};
 	assert.equal(line(true), '1436,300,500,,a');
 	assert.equal(line(false), '1436,300,500,');
+});
+
+// The City of Dalaran has a way in for each faction (#706): the Horde's
+// tunnel on the western wall, the Alliance's pipe in Cantrips & Crows.
+const DALARAN = { key: 'city-of-dalaran', map: 1416, x: 8.5, y: 59.2, source: 'https://example.org', A: { map: 1416, x: 14.68, y: 62.99, source: 'https://example.org' } };
+
+test("chooseEntrance: a table entry's Alliance way in rides along as entrance.A, whichever point wins", () => {
+	const e = chooseEntrance({ name: 'City of Dalaran', table: DALARAN });
+	assert.deepEqual(e, { map: 1416, x: 8.5, y: 59.2, f: null, A: { map: 1416, x: 14.7, y: 63 } });
+	const rec = chooseEntrance({ name: 'City of Dalaran', table: DALARAN, recorded: [{ map: 1416, x: 8.6, y: 59.3, n: 1 }] });
+	assert.deepEqual(rec.A, { map: 1416, x: 14.7, y: 63 }, 'a recording keeps the Alliance way in');
+	assert.equal(chooseEntrance({ ...base, table }).A, undefined, 'one way in: no A');
+});
+
+test('the curated table: the City of Dalaran sends the Alliance in through Cantrips & Crows, inside the city', () => {
+	const d = loadEntranceTable()['city-of-dalaran'];
+	assert.ok(d && d.A, 'an Alliance way in');
+	assert.deepEqual([d.A.map, d.A.x, d.A.y], [1416, 14.7, 63]);
+	assert.match(d.A.source, /^https:\/\//);
+	assert.ok(d.A.note);
+});
+
+test('pack: the Alliance way in follows the entrance, and the decoder hands it to an Alliance character only', () => {
+	const inst = { key: 'city-of-dalaran', name: 'City of Dalaran', kind: 'dungeon', forever: true, areaId: 279, map: 2959, entrance: { map: 1416, x: 8.5, y: 59.2, f: null, A: { map: 1416, x: 14.7, y: 63 } }, levels: null, bosses: [] };
+	const codex = { meta: { schema: 1 }, items: {}, npcs: {}, objects: {}, quests: {}, instances: { 'city-of-dalaran': inst }, zones: {}, factions: {}, spells: {}, frames: {} };
+	const text = Object.values(emitPack(codex, { version: '0', build: 'test' })).join('\n');
+	assert.match(text, /1416,85,592,,,1416,147,630/);
+	const pack = writeCodexPack(codex);
+	try {
+		const entrance = (faction) =>
+			runAddon({
+				before: `${pack.stubLua}\nfunction UnitFactionGroup() return ${JSON.stringify(faction)}, ${JSON.stringify(faction)} end`,
+				addons: [{ name: 'Polestar', files: ['Core/Init.lua', 'Core/Compat.lua', 'Core/Data.lua', 'Core/Names.lua', 'Core/GuideTexts.lua', 'Core/Guides.lua', 'Lookup/Codex.lua'] }],
+				script: `Polestar.Codex.Load()\nlocal e = Polestar.Codex.Instance("city-of-dalaran").entrance\nemit({ e.map, e.x, e.y })`,
+			}).emitted[0];
+		assert.deepEqual(entrance('Alliance'), [1416, 14.7, 63], 'the Alliance: Cantrips & Crows');
+		assert.deepEqual(entrance('Horde'), [1416, 8.5, 59.2], 'the Horde: the tunnel');
+	} finally {
+		pack.cleanup();
+	}
 });

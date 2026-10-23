@@ -525,3 +525,23 @@ ${SIMULATE}`, { done: [1098, 1740, 1011, 1014], log: [], ready: [1013] });
 		{ at: null, saved, done: [1098, 1740, 1011, 1014], log: [], ready: [1013] });
 	assert.deepEqual(after, { tabs: ['lookup/handin/shadowfang-keep'], steps: [{ title: "Keeper Bel'dugur", goals: 'turnin:1013' }] });
 });
+
+// A dungeon with a way in for each faction (the City of Dalaran, #706): the
+// page, the arrow and the pick-up guide's last step (all from Dungeons.Get)
+// use the character's own.
+test("a dungeon with a way in for each faction: the page and the arrow lead to the character's own, the guide ends there", () => {
+	const both = JSON.parse(JSON.stringify(codex));
+	both.instances[KEY].entrance.A = { map: 1421, x: 50, y: 60 };
+	const sides = writeCodexPack(both, { extraFiles: emitJournal(buildJournal(inputs, both)) });
+	const enter = `local d, def = D.Get("${KEY}"), D.PickupGuide("${KEY}")
+local at
+for _, g in ipairs(def and def.steps[#def.steps].goals or {}) do if g.t == "goto" then at = { g.map, g.x, g.y } end end
+emit({ page = { d.entrance.map, d.entrance.x, d.entrance.y }, arrow = { D.Entrance("${KEY}") }, guide = at })`;
+	try {
+		assert.deepEqual(run(enter, { codexPack: sides })[0], { page: [1421, 44.8, 67.8], arrow: [1421, 44.8, 67.8, 'e'], guide: [1421, 44.8, 67.8] }, 'the Horde: the one way in');
+		const alliance = run(enter, { codexPack: sides, race: 'Human', faction: 'Alliance', cls: 'PALADIN', done: [], log: [] })[0];
+		assert.deepEqual([alliance.page, alliance.arrow], [[1421, 50, 60], [1421, 50, 60]], 'the Alliance: its own');
+	} finally {
+		sides.cleanup();
+	}
+});
