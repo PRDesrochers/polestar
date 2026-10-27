@@ -315,7 +315,7 @@ step Gordo
 
 # Calvin's duel is the second quest named A Rogue's Deal (590): he offers it
 # only once his letter, the first A Rogue's Deal (8), is handed to Innkeeper
-# Renee in Brill (Forever's quest data: 590 needs 8; issues #742, #743).
+# Renee in Brill (Forever's quest data: 590 needs 8; issue #742).
 step Calvin Montague
   tip Walk on west to the Solliden Farmstead. Deathguard Simmer stands at the farm. Now that Renee has his letter, Calvin, by the farmhouse, offers a second A Rogue's Deal: a duel. Talk to him.
   accept 365                          -- Deathguard Simmer
