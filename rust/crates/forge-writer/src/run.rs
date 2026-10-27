@@ -105,7 +105,8 @@ pub fn run(inp: &RunInputs, opts: &RunOpts) -> Result<RunOutput, String> {
 	let mut check = None;
 	if opts.engine {
 		let accept_lvl: FxHashMap<u32, f64> = inp.route.order.iter().filter(|o| o.t == OrderT::Accept).filter_map(|o| Some((o.q?, o.lvl?))).collect();
-		let einp = engine::Inputs { data: inp.gdata, mechanics: inp.mechanics, steps: inp.steps, spells: inp.spells, walks: inp.walk_yards, accept_lvl: &accept_lvl };
+		let no_along = crate::fixes::no_along(inp.records, inp.route.faction.as_deref());
+		let einp = engine::Inputs { data: inp.gdata, mechanics: inp.mechanics, steps: inp.steps, spells: inp.spells, walks: inp.walk_yards, accept_lvl: &accept_lvl, no_along: &no_along };
 		let er = engine::engine_pass(&mut tree, &r.travel, &einp, &opts.rules);
 		log.extend(er.log.iter().cloned());
 		log.push(format!(

@@ -85,6 +85,8 @@ pub struct Inputs<'a> {
 	pub walks: Option<&'a dyn WalkYards>,
 	/// The route's character level at each quest's accept (route order `lvl`).
 	pub accept_lvl: &'a FxHashMap<u32, f64>,
+	/// Objectives (quest, objective number) the guide fixes keep off the along lists (`along: false`).
+	pub no_along: &'a FxHashSet<(u32, u32)>,
 }
 
 /// Lines written, per rule.
@@ -451,6 +453,9 @@ pub fn engine_pass(tree: &mut BTreeMap<String, String>, t: &Travel, inp: &Inputs
 		for (i, g) in seq.iter().enumerate() {
 			if matches!(g.verb.as_str(), "kill" | "collect" | "interact") && !g.spots.is_empty() {
 				if let (Some(q), Some(oi)) = (g.quest, g.oi) {
+					if inp.no_along.contains(&(q, oi)) {
+						continue;
+					}
 					work.entry((q, oi)).or_default().push(i);
 				}
 			}

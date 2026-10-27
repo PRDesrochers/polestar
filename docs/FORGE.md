@@ -421,7 +421,7 @@ A fix goes into a record the next build applies, whoever builds:
 | whether the route takes a quest; an order players asked for | `data/route-fixes.json` (`overrides`, `deliberate`) |
 | the check that pins it | `tests/guides-reported.test.js` |
 | an arrow point: where an objective is done, or where a giver or ender stands; a road the target walks; an objective that needs its own goal line | `data/places.json` |
-| a step's tip, or a `level` gate before a goal | `data/guide-fixes.json` |
+| a step's tip, or a `level` gate before a goal; work listed "on the way" that the walk does not really pass | `data/guide-fixes.json` |
 
 Places and guide fixes are anchored on a quest's goal, never on a line or a step, and the writer
 applies them to the guides it writes, last:
@@ -449,7 +449,9 @@ before the bare `complete`, which goes once every objective has one.
 ```
 
 `at.goal` is `accept`, `turnin`, `complete` or `objective` (with `at.objective`); `tip` sets the
-step's tip, `level` puts a `level N` gate right before the goal. A place or guide fix with
+step's tip, `level` puts a `level N` gate right before the goal. `"along": false` on an objective
+keeps it off the "on the way" lists the engine writes for work a walk passes near (`#737`: the
+Tirisfal Pumpkins, in fields off the road); the objective stays at its own step. A place or guide fix with
 `"faction": "Alliance"` (or `"Horde"`) holds for that side's routes only.
 
 Each record says why, in our own words, and names its issue (`#647`) or pull request; a correction,

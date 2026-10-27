@@ -13,7 +13,10 @@
 //!   places a written objective from the data.
 //! - **guide-fixes**: step content that is neither data nor route, at a goal's step:
 //!   `{ id, at: { quest, goal: "accept" | "turnin" | "complete" | "objective", objective? }, tip }`
-//!   sets the step's `tip`; `level: N` puts a `level N` gate right before the anchor goal.
+//!   sets the step's `tip`; `level: N` puts a `level N` gate right before the anchor goal;
+//!   `along: false` on an objective keeps it off the engine's "on the way" lists (rule R1), for work
+//!   the route walks near that a player cannot see or reach from the road. The fix pass leaves the
+//!   lines alone; the engine reads it through [`no_along`].
 //!
 //! A record with `faction` ("Alliance" or "Horde") applies only to that faction's routes (a quest both
 //! sides do whose fix holds for one). Every record carries `source` ({ kind, ref }), `issue` and `note`;
@@ -26,6 +29,7 @@
 
 use std::collections::{BTreeMap, HashSet};
 
+use rustc_hash::FxHashSet;
 use serde::Serialize;
 use serde_json::Value;
 
@@ -344,6 +348,26 @@ fn apply_fix(lines: &mut Vec<String>, found: &[usize], r: &Value) -> Vec<usize> 
 	changed
 }
 
+fn is_no_along(r: &Value) -> bool {
+	r["along"] == Value::Bool(false)
+}
+
+/// The objectives (quest, objective number) the guide fixes keep off the engine's along lists, for
+/// `faction`'s routes.
+pub fn no_along(rec: Records, faction: Option<&str>) -> FxHashSet<(u32, u32)> {
+	let other_side = |r: &Value| r["faction"].as_str().zip(faction).is_some_and(|(a, b)| !a.eq_ignore_ascii_case(b));
+	rec.guide_fixes
+		.and_then(|d| d["fixes"].as_array())
+		.into_iter()
+		.flatten()
+		.filter(|r| is_no_along(r) && !other_side(r))
+		.filter_map(|r| match fix_anchor(r)? {
+			Anchor::Objective(q, n) => Some((q, n)),
+			_ => None,
+		})
+		.collect()
+}
+
 /// Applies the records to `files` of `tree` (the guides the route was written into); `quests`: the
 /// route's quests (a record for another quest is not for this start).
 pub fn apply(tree: &mut BTreeMap<String, String>, files: &[String], quests: &HashSet<u32>, faction: Option<&str>, rec: Records, data: Option<&Data>) -> Vec<FixRow> {
@@ -362,8 +386,14 @@ pub fn apply(tree: &mut BTreeMap<String, String>, files: &[String], quests: &Has
 	}
 	for r in rec.guide_fixes.and_then(|d| d["fixes"].as_array()).into_iter().flatten() {
 		let anchor = fix_anchor(r);
-		let kind = if r.get("tip").is_some() { "tip" } else { "level" };
-		recs.push(Rec { file: "guide-fixes", r, slot: format!("{anchor:?} {kind}"), want: format!("{}{}", r["tip"], r["level"]), anchor });
+		let kind = if r.get("tip").is_some() {
+			"tip"
+		} else if r.get("along").is_some() {
+			"along"
+		} else {
+			"level"
+		};
+		recs.push(Rec { file: "guide-fixes", r, slot: format!("{anchor:?} {kind}"), want: format!("{}{}{}", r["tip"], r["level"], r["along"]), anchor });
 	}
 	let mut rows = Vec::new();
 	for (k, x) in recs.iter().enumerate() {
@@ -397,6 +427,8 @@ pub fn apply(tree: &mut BTreeMap<String, String>, files: &[String], quests: &Has
 				continue;
 			}
 			found_any = true;
+			// Kept off the along lists by the engine, every build: in force wherever its line is.
+			changed_any |= is_no_along(x.r);
 			let changed = if x.file == "places" { apply_place(&mut lines, &found, x.r, data) } else { apply_fix(&mut lines, &found, x.r) };
 			if !changed.is_empty() {
 				changed_any = true;
@@ -488,6 +520,22 @@ mod tests {
 		let (again, rows) = run(&out, json!({}), fixes, &[]);
 		assert_eq!(again, out);
 		assert!(rows.iter().all(|r| r.state == "redundant"), "{rows:?}");
+	}
+
+	#[test]
+	fn an_objective_kept_off_the_along_lists_leaves_the_lines_to_the_engine() {
+		let fixes = json!({ "fixes": [
+			{ "id": "737-pumpkins", "at": { "quest": 99141, "goal": "objective", "objective": 3 }, "along": false },
+			{ "id": "alliance-only", "at": { "quest": 3505, "goal": "objective", "objective": 1 }, "along": false, "faction": "Alliance" },
+			{ "id": "elsewhere", "at": { "quest": 1, "goal": "objective", "objective": 1 }, "along": false }
+		] });
+		let (out, rows) = run(SEED, json!({}), fixes.clone(), &[3505, 99141]);
+		assert_eq!(out, SEED);
+		let st: Vec<(&str, &str)> = rows.iter().map(|r| (r.id.as_str(), r.state.as_str())).collect();
+		assert_eq!(st, [("737-pumpkins", "applied"), ("alliance-only", "not for this start"), ("elsewhere", "not for this start")]);
+		let rec = Records { places: None, guide_fixes: Some(&fixes) };
+		assert_eq!(no_along(rec, Some("Horde")), FxHashSet::from_iter([(99141, 3), (1, 1)]));
+		assert_eq!(no_along(rec, Some("Alliance")), FxHashSet::from_iter([(99141, 3), (3505, 1), (1, 1)]));
 	}
 
 	#[test]

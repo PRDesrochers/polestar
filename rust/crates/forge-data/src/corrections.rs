@@ -1201,7 +1201,7 @@ fn check_places(ck: &mut Ck, d: &V) {
 }
 
 /// data/guide-fixes.json: `{ about, fixes: [{ id, at: { quest, goal: accept | turnin | complete |
-/// objective, objective? }, tip | level, note, source, issue, pr }] }`.
+/// objective, objective? }, tip | level | along: false, note, source, issue, pr }] }`.
 fn check_guide_fixes(ck: &mut Ck, d: &V) {
 	ck.keys("", d, &["about", "_about", "fixes"]);
 	let list = d.get("fixes");
@@ -1213,7 +1213,7 @@ fn check_guide_fixes(ck: &mut Ck, d: &V) {
 	let mut slots: Vec<(String, String)> = Vec::new();
 	for (i, r) in list.items().iter().enumerate() {
 		let at = format!("fixes[{i}]");
-		ck.keys(&at, r, &["id", "at", "tip", "level", "faction", "note", "source", "issue", "pr"]);
+		ck.keys(&at, r, &["id", "at", "tip", "level", "along", "faction", "note", "source", "issue", "pr"]);
 		check_record(ck, &at, r, &mut ids);
 		let a = r.get("at");
 		ck.keys(&format!("{at}.at"), &a, &["quest", "goal", "objective"]);
@@ -1232,22 +1232,31 @@ fn check_guide_fixes(ck: &mut Ck, d: &V) {
 			}
 			_ => ck.err(format!("{at}.at.goal"), format!("{}: accept, turnin, complete or objective", show(&a.get("goal")))),
 		}
-		let (tip, level) = (r.get("tip"), r.get("level"));
-		let kind = match (tip.is_undef(), level.is_undef()) {
-			(false, true) => {
+		let (tip, level, along) = (r.get("tip"), r.get("level"), r.get("along"));
+		let kind = match (tip.is_undef(), level.is_undef(), along.is_undef()) {
+			(false, true, true) => {
 				if !has_text(&tip) || tip.as_str().is_some_and(|t| t.contains('\n')) {
 					ck.err(format!("{at}.tip"), "a tip is one line of text");
 				}
 				"tip"
 			}
-			(true, false) => {
+			(true, false, true) => {
 				if !level.as_num().is_some_and(|n| n.fract() == 0.0 && (2.0..=60.0).contains(&n)) {
 					ck.err(format!("{at}.level"), format!("{} must be a level, 2 to 60", show(&level)));
 				}
 				"level"
 			}
+			(true, true, false) => {
+				if !matches!(along, V::Bool(false)) {
+					ck.err(format!("{at}.along"), format!("{} must be false", show(&along)));
+				}
+				if a.get("goal").as_str() != Some("objective") {
+					ck.err(format!("{at}.at.goal"), "an objective is kept off the along lists: the goal is objective");
+				}
+				"along"
+			}
 			_ => {
-				ck.err(&at, "a guide fix sets either a `tip` or a `level` gate");
+				ck.err(&at, "a guide fix sets one of a `tip`, a `level` gate or `along: false`");
 				"?"
 			}
 		};
@@ -1389,7 +1398,7 @@ mod tests {
 				{{ "id": "1-d", "quest": 10, "objective": 2, "faction": "Horde", "at": {{ "map": 2521, "x": 1, "y": 1, "frame": "live" }}, {src} }} ] }}"#
 		);
 		let g = format!(
-			r#"{{ "fixes": [ {{ "id": "1-t", "at": {{ "quest": 10, "goal": "accept" }}, "tip": "A tip.", {src} }}, {{ "id": "1-l", "at": {{ "quest": 11, "goal": "objective", "objective": 1 }}, "level": 14, {src} }} ] }}"#
+			r#"{{ "fixes": [ {{ "id": "1-t", "at": {{ "quest": 10, "goal": "accept" }}, "tip": "A tip.", {src} }}, {{ "id": "1-l", "at": {{ "quest": 11, "goal": "objective", "objective": 1 }}, "level": 14, {src} }}, {{ "id": "1-o", "at": {{ "quest": 11, "goal": "objective", "objective": 1 }}, "along": false, {src} }} ] }}"#
 		);
 		assert_eq!(record_findings(Some(&p), Some(&g)), Vec::<String>::new());
 		let bad_p = r#"{ "places": [
@@ -1397,7 +1406,8 @@ mod tests {
 			{ "id": "x", "quest": 10, "objective": 1, "write": true, "source": { "kind": "in-game-check", "ref": "r" }, "note": "n" },
 			{ "id": "y", "quest": 10, "objective": 1, "at": { "map": 1429, "x": 1, "y": 1 }, "path": { "map": 1429, "points": [] }, "source": { "kind": "in-game-check", "ref": "r" }, "note": "n" },
 			{ "id": "w", "quest": 10, "objective": 2, "faction": "Both", "at": { "map": 2521, "x": 1, "y": 1, "frame": "era" }, "source": { "kind": "in-game-check", "ref": "r" }, "note": "n" } ] }"#;
-		let bad_g = r#"{ "fixes": [ { "id": "z", "at": { "quest": 10, "goal": "pickup" }, "tip": "two\nlines", "level": 70 } ] }"#;
+		let bad_g =
+			r#"{ "fixes": [ { "id": "z", "at": { "quest": 10, "goal": "pickup" }, "tip": "two\nlines", "level": 70 }, { "id": "z2", "at": { "quest": 10, "goal": "accept" }, "along": true } ] }"#;
 		let f = record_findings(Some(bad_p), Some(bad_g));
 		let has = |s: &str| f.iter().any(|x| x.contains(s));
 		for s in [
@@ -1413,7 +1423,9 @@ mod tests {
 			"places[3].faction: \"Both\" is not Alliance or Horde",
 			"places[3].at.frame: map 2521 has no Era bounds",
 			"fixes[0].at.goal",
-			"fixes[0]: a guide fix sets either",
+			"fixes[0]: a guide fix sets one of",
+			"fixes[1].along: true must be false",
+			"fixes[1].at.goal: an objective is kept off the along lists",
 		] {
 			assert!(has(s), "{s}: {f:#?}");
 		}

@@ -9,7 +9,7 @@ mod common;
 use common::Ref;
 use forge_writer::engine::{engine_pass, Inputs, Opts};
 use forge_writer::travel::Travel;
-use rustc_hash::FxHashMap;
+use rustc_hash::{FxHashMap, FxHashSet};
 use std::collections::BTreeMap;
 
 thread_local! {
@@ -34,6 +34,11 @@ fn guide(id: &str, race: &str, faction: &str, zone: &str, next: Option<&str>, bo
 
 /// Runs the rules on guides `files` (name, text) as the route's race; -> the files after, as lines.
 fn run(files: &[(&str, String)], race: &str, faction: &str, opts: &Opts, accept_lvl: &FxHashMap<u32, f64>) -> BTreeMap<String, Vec<String>> {
+	run_with(files, race, faction, opts, accept_lvl, &FxHashSet::default())
+}
+
+/// `run`, with objectives kept off the along lists (guide fixes' `along: false`).
+fn run_with(files: &[(&str, String)], race: &str, faction: &str, opts: &Opts, accept_lvl: &FxHashMap<u32, f64>, no_along: &FxHashSet<(u32, u32)>) -> BTreeMap<String, Vec<String>> {
 	let r = reference();
 	let mut tree: BTreeMap<String, String> = files.iter().map(|(n, t)| (format!("forever/t/{n}.guide"), t.clone())).collect();
 	let t = Travel {
@@ -43,7 +48,7 @@ fn run(files: &[(&str, String)], race: &str, faction: &str, opts: &Opts, accept_
 		shared: Vec::new(),
 		faction: Some(faction.into()),
 	};
-	let inp = Inputs { data: &r.data, mechanics: r.mech.as_ref(), steps: r.steps.as_ref(), spells: None, walks: None, accept_lvl };
+	let inp = Inputs { data: &r.data, mechanics: r.mech.as_ref(), steps: r.steps.as_ref(), spells: None, walks: None, accept_lvl, no_along };
 	engine_pass(&mut tree, &t, &inp, opts);
 	tree.into_iter().map(|(k, v)| (k.trim_start_matches("forever/t/").trim_end_matches(".guide").to_string(), v.split('\n').map(str::to_string).collect())).collect()
 }
@@ -71,6 +76,19 @@ fn r1_gloom_weed_along_the_road_to_brill() {
 	assert!(idx(a, "step Gordo") < s && s < idx(a, "step Brill"));
 	assert_eq!(a[idx(a, "step Brill") + 1], "  label q5481");
 	assert_eq!(a.iter().filter(|l| l.contains("collect 12737")).count(), 1);
+}
+
+#[test]
+#[ignore = "needs data/forever (forge data build, or POLESTAR_V1)"]
+fn r1_an_objective_a_guide_fix_keeps_off_the_along_lists_stays_a_stop() {
+	// #737: work the walk passes on the map but not in the game (the Scarlet-held pumpkin fields).
+	let g = guide("a", "Undead", "Horde", "Tirisfal Glades", None, &["step Gordo", "  accept 5481", "  collect 12737 quest 5481.1", "", "step Brill", "  turnin 5481"]);
+	let off_list = FxHashSet::from_iter([(5481, 1)]);
+	let after = run_with(&[("a", g)], "Undead", "Horde", &Opts { along: true, ..off() }, &FxHashMap::default(), &off_list);
+	let a = &after["a"];
+	assert!(!a.iter().any(|l| l.contains("along")), "{}", a.join("\n"));
+	let s = idx(a, "step Gordo");
+	assert!(a[s + 2].starts_with("  collect 12737 quest 5481.1"), "{}", a.join("\n"));
 }
 
 #[test]
