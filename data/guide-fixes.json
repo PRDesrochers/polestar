@@ -43,6 +43,26 @@
 			],
 			"issue": 674,
 			"pr": 678
+		},
+		{
+			"id": "742-tirisfal-rogues-deal-duel-tip",
+			"at": {
+				"quest": 590,
+				"goal": "accept"
+			},
+			"tip": "Now that Innkeeper Renee has his letter, Calvin Montague, by the farmhouse at the Solliden Farmstead, offers a second A Rogue's Deal: a duel. Talk to him.",
+			"note": "A Rogue's Deal (590), Calvin's duel, shares its name with his letter (8) and is offered only once the letter is handed to Renee in Brill, so players who took the letter leaving Deathknell expect the duel then.",
+			"source": [
+				{
+					"kind": "questie",
+					"ref": "questie-forever, as merged in data/forever quests.json: quest 590 pre [8]"
+				},
+				{
+					"kind": "pfquest",
+					"ref": "pfquest, as merged in data/forever quests.json: quest 590 pre [8]"
+				}
+			],
+			"issue": 742
 		}
 	]
 }
