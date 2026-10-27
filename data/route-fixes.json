@@ -313,6 +313,17 @@
 			},
 			{
 				"a": [
+					"accept",
+					404
+				],
+				"b": [
+					"turnin",
+					383
+				],
+				"why": "Tirisfal, Fitz #740: A Putrid Task taken from Deathguard Dillinger on the way in to Executor Zygand, not on a walk back"
+			},
+			{
+				"a": [
 					"turnin",
 					89
 				],
