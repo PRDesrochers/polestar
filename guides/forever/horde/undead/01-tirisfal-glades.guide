@@ -259,13 +259,13 @@ step Brill
   tip Follow the road east to Brill. Junior Apothecary Holland stands at the north-west edge of town; the Gallows' End Tavern is the big inn in the middle, with Executor Zygand in front of it.
   turnin 5481                         -- Junior Apothecary Holland
   accept 5482
+  accept 404                          -- Deathguard Dillinger
   sethome "Gallows' End Tavern" npc 5688 -- Innkeeper Renee
   turnin 8                            -- Innkeeper Renee
   turnin 383                          -- Executor Zygand
   accept 427
   accept 99134
   accept 99141
-  accept 404                          -- Deathguard Dillinger
   collect 286200 quest 99141.1 npc 1496 @58.2,51.5 -- Ask Deathguard Dillinger for his report
   accept 86784                        -- Deathguard Bartholomew
   turnin 91209 only Paladin           -- Shari Stilwell, the Paladin trainer

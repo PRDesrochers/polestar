@@ -202,6 +202,16 @@ test(`${TIRISFAL}: Onrevax's report: each Patience report goal names the NPC who
 	}
 });
 
+// Fitz's report (#740): Dillinger stands between Holland and Zygand, so A
+// Putrid Task is taken as you walk past him, not on a walk back.
+test(`${TIRISFAL}: Fitz's report (#740): A Putrid Task is taken from Dillinger on the way to Zygand`, { skip }, () => {
+	const list = goals(TIRISFAL);
+	const putrid = at(list, 'accept 404', is('accept', 404));
+	assert.ok(at(list, 'turnin 5481', is('turnin', 5481)) < putrid, 'after Holland');
+	assert.ok(putrid < at(list, 'turnin 383', is('turnin', 383)), 'before Vital Intelligence is handed to Zygand');
+	assert.equal(list[putrid].s, list[at(list, 'turnin 383', is('turnin', 383))].s, 'in the same Brill step');
+});
+
 // Gordo walks the road between his spawn (43.1,54.7) and the edge of Brill
 // (CMaNGOS classic-db's waypoints for him), and you come to him for his report
 // from the fields west of Brill.
