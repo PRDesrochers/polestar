@@ -435,6 +435,14 @@ test(`${TIRISFAL}: an3vilmonk3y's report (#345) and Onrevax's (#120): A Light in
 	}
 });
 
+test(`${TIRISFAL}: Fitz's report (#736): A Light in the Darkness is handed to Aramis in Deathknell before the Scarlet farm, for every class`, { skip }, () => {
+	for (const cls of ['WARRIOR', 'ROGUE', 'PRIEST', 'MAGE', 'WARLOCK', 'PALADIN']) {
+		const list = goals(TIRISFAL).filter(forClass(cls));
+		const farm = at(list, `collect 3266 for a ${cls}`, (g) => g.t === 'collect' && g.quest === 381);
+		assert.ok(at(list, `turnin 98389 for a ${cls}`, is('turnin', 98389)) < farm, `a ${cls} hands it in before the Scarlet Armbands`);
+	}
+});
+
 // --- Coldridge Valley (thmastin, PR #16): the valley is never walked back to.
 
 test(`${DUN_MOROGH}: thmastin's report: Grik'nir comes after Anvilmar, and the journal and Nori's mug are handed in on one camp visit`, { skip }, () => {

@@ -1149,6 +1149,17 @@
 			},
 			{
 				"a": [
+					"turnin",
+					98389
+				],
+				"b": [
+					"task",
+					381
+				],
+				"why": "#736 Fitz Tirisfal: A Light in the Darkness handed to Aramis in Deathknell before the Scarlet farm"
+			},
+			{
+				"a": [
 					"accept",
 					2541
 				],
