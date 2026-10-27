@@ -1,5 +1,5 @@
 {
-	"about": "Step content that is neither data nor route, anchored on a quest's goal: a step's tip (tip) or a level gate before the goal (level). at: { quest, goal: accept | turnin | complete | objective, objective? }. forge-writer applies each record to the guides it writes, every build; forge data check-corrections checks this file. A record with faction (Alliance or Horde) holds for that side's routes only. Each record has a note, its source ({ kind, ref }) and its issue or pr.",
+	"about": "Step content that is neither data nor route, anchored on a quest's goal: a step's tip (tip), a level gate before the goal (level), or an objective kept off the \"on the way\" lists the route walks past (along: false; goal objective). at: { quest, goal: accept | turnin | complete | objective, objective? }. forge-writer applies each record to the guides it writes, every build; forge data check-corrections checks this file. A record with faction (Alliance or Horde) holds for that side's routes only. Each record has a note, its source ({ kind, ref }) and its issue or pr.",
 	"fixes": [
 		{
 			"id": "674-tirisfal-gordo-task-tip",
@@ -43,6 +43,21 @@
 			],
 			"issue": 674,
 			"pr": 678
+		},
+		{
+			"id": "737-tirisfal-pumpkins-not-on-the-way",
+			"at": {
+				"quest": 365,
+				"goal": "objective",
+				"objective": 1
+			},
+			"along": false,
+			"note": "Fields of Grief: the Tirisfal Pumpkins grow in the Scarlet-held fields off the road west of Brill (180 yards or more from Deathguard Simmer, 280 from Gordo), so a player on the Gloom Weed walk does not pass them; they stay at the step in the fields.",
+			"source": {
+				"kind": "in-game-check",
+				"ref": "#737"
+			},
+			"issue": 737
 		}
 	]
 }
