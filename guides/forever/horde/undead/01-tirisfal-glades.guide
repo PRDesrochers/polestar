@@ -199,11 +199,12 @@ step Scavenging Deathknell
 
 # Night Web's Hollow: players report the cave entrance near 26,60 (quest 380).
 step Night Web's Hollow
-  tip Head west to the cave. The Young Night Web Spiders sit outside; the Night Web Spiders and the Webbed Victims are inside.
+  tip Head west to the cave. The Young Night Web Spiders sit outside; the Night Web Spiders and the Webbed Forsaken are inside. Attack a Webbed Forsaken's cocoon to free them.
   kill 1504 quest 380.1
   kill 1505 quest 380.2
   goto 26.0,60.0 "Night Web's Hollow"
-  goto 24.8,59.6 "Webbed Victims"    -- Free six Webbed Victims inside the cave for Aramis
+  goto 24.8,59.6 "Webbed Victims"    -- Free six Webbed Forsaken inside the cave for Aramis
+  kill 271961 quest 98389.1 "Attack Webbed Forsaken"    -- #735: attacking the cocoon frees them
   complete 98389
 
 step Back to Deathknell

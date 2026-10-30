@@ -43,6 +43,28 @@
 			],
 			"issue": 674,
 			"pr": 678
+		},
+		{
+			"id": "735-webbed-forsaken-tip",
+			"at": {
+				"quest": 98389,
+				"goal": "objective",
+				"objective": 1
+			},
+			"faction": "Horde",
+			"tip": "Night Web's Hollow is the cave to the west. The Webbed Forsaken hang in cocoons inside: attack a cocoon to free the Forsaken in it.",
+			"note": "A Light in the Darkness: says that attacking the cocoon is what frees a Webbed Forsaken.",
+			"source": [
+				{
+					"kind": "in-game-check",
+					"ref": "#735"
+				},
+				{
+					"kind": "client",
+					"ref": "forever-db quest_objective: 98389.1 kill 271961 (Webbed Forsaken) x6"
+				}
+			],
+			"issue": 735
 		}
 	]
 }

@@ -378,6 +378,17 @@ for (const [guide, quest, item, count, vendor, what] of BUY_AT_TURNIN) {
 
 // --- Bandarion Keep (Mike_, 0.2.3): Hilda the Breaker and Ephram Barbaro offer their quests to Paladins only.
 
+test(`${TIRISFAL}: Fitz's report (#735): A Light in the Darkness asks to attack the Webbed Forsaken, before the quest's bare complete`, { skip }, () => {
+	for (const guide of [TIRISFAL, 'forever/reputation/undercity.guide']) {
+		const list = goals(guide);
+		const kill = at(list, '98389.1 (Webbed Forsaken)', (g) => g.t === 'kill' && g.quest === 98389 && g.oi === 1);
+		assert.equal(list[kill].goal.text, 'Attack Webbed Forsaken', guide);
+		assert.equal(list[kill].goal.npc, 271961, guide);
+		const complete = list.findIndex(({ goal }) => is('complete', 98389)(goal));
+		assert.ok(complete < 0 || kill < complete, `${guide}: the Webbed Forsaken come before the bare complete`);
+	}
+});
+
 test(`${TIRISFAL}: Mike_'s report: only Paladins are sent to Hilda the Breaker and Ephram Barbaro at Bandarion Keep`, { skip }, () => {
 	const list = goals(TIRISFAL);
 	const keep = [246389, 259190]; // Hilda the Breaker, Ephram Barbaro

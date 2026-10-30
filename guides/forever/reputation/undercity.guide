@@ -224,7 +224,7 @@ step Around Deathknell
   collect 11127 x6 quest 3902.1       -- Scavenged Goods
   kill 1504 x10 quest 380.1           -- Young Night Web Spider
   kill 1505 x8 quest 380.2            -- Night Web Spider
-  kill 271961 x6 quest 98389.1        -- Webbed Forsaken freed
+  kill 271961 x6 quest 98389.1 "Attack Webbed Forsaken"    -- Webbed Forsaken freed
   interact 178090 quest 6395.1        -- Marla's Grave, with Samuel's Remains
 
 step Deathknell: hand in

@@ -426,6 +426,25 @@
 			],
 			"issue": 703,
 			"pr": 704
+		},
+		{
+			"id": "735-98389-1",
+			"quest": 98389,
+			"objective": 1,
+			"write": true,
+			"faction": "Horde",
+			"note": "A Light in the Darkness: the goal names the Webbed Forsaken to attack in Night Web's Hollow, not the bare quest.",
+			"source": [
+				{
+					"kind": "in-game-check",
+					"ref": "#735"
+				},
+				{
+					"kind": "client",
+					"ref": "forever-db quest_objective: 98389.1 kill 271961 (Webbed Forsaken) x6"
+				}
+			],
+			"issue": 735
 		}
 	]
 }
