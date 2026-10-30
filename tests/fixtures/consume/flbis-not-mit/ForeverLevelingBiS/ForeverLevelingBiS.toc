@@ -1,3 +1,0 @@
-## Interface: 11508
-## Title: ForeverLevelingBiS (test fixture)
-## Version: 9.9.9-fixture

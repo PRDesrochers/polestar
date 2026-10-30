@@ -144,7 +144,17 @@ local function updateGoals(world)
 	end
 	local target = Nav.GetTarget()
 	local pins = {}
-	for _, goal in ipairs(view.goals) do
+	-- The step's goals, then the Along the way list's (Engine.GetAlong: along
+	-- steps and pinned quests, #644).
+	local list = view.goals
+	if Engine.GetAlong then
+		list = {}
+		for _, goal in ipairs(view.goals) do list[#list + 1] = goal end
+		for _, s in ipairs(Engine.GetAlong()) do
+			for _, goal in ipairs(s.goals) do list[#list + 1] = goal end
+		end
+	end
+	for _, goal in ipairs(list) do
 		if goal.map and goal.x and goal.y and (goal.status == "active" or goal.status == "pending")
 			and not (target and target.map == goal.map and target.x == goal.x and target.y == goal.y) then
 			local text = goal.text
@@ -181,11 +191,17 @@ end
 -- places the arrow does not pick by itself) }, ... }, nil without spots or a map frame.
 -- A region narrower than REGION_SMALL yards is an 8-gon (a handful of pixels
 -- on the world map), the others REGION_SIDES-gons.
+-- REGION_WORK caps the spot pairs one goal's grouping compares (the sweep and
+-- the joins together); the sweep of the busiest built-in goal (438 spots)
+-- compares about 11,000. A goal past it, only a crafted guide (an import
+-- string), draws no regions instead of freezing the game on a quadratic
+-- grouping.
 local REGION_SIDES, REGION_SMALL = 16, 200
 local REGION_LINK = 90
 local REGION_MAX_SPAN = 700
 local REGION_PAD = 10
 local REGION_MIN_RADIUS = 15
+local REGION_WORK = 50000
 local regionCache = setmetatable({}, { __mode = "k" })
 local sides = {}
 for _, k in ipairs({ 8, REGION_SIDES }) do
@@ -234,6 +250,12 @@ end
 local function regionsOf(goal)
 	local cached = regionCache[goal]
 	if cached ~= nil then return cached or nil end
+	local work = 0
+	local function tooMuch()
+		regionCache[goal] = false
+		ns.Debug("spawn regions: a goal's", #goal.spots, "spots are too many to group; no regions drawn")
+		return nil
+	end
 	local C = ns.Compat
 	local spots = goal.spots
 	if not (C and C.MapToWorld and type(spots) == "table" and goal.map) then return nil end
@@ -270,6 +292,8 @@ local function regionsOf(goal)
 		for b = a + 1, n do
 			local j = order[b]
 			if xs[j] - xs[i] > reach then break end
+			work = work + 1
+			if work > REGION_WORK then return tooMuch() end
 			if cs[i] == cs[j] then
 				local gap = across(i, j) - 2 * (rs[i] + rs[j])
 				if gap <= REGION_LINK then
@@ -293,6 +317,8 @@ local function regionsOf(goal)
 			local s = math.max(span[a], span[b])
 			for _, i in ipairs(members[a]) do
 				for _, j in ipairs(members[b]) do
+					work = work + 1
+					if work > REGION_WORK then return tooMuch() end
 					local d = across(i, j)
 					if d > s then s = d end
 				end
@@ -360,6 +386,20 @@ local function updateAreas(world, minimap)
 			if regions then
 				shown[#shown + 1], shown[#shown + 2] = regions, v.index == tg
 				sig[#sig + 1], sig[#sig + 2] = regions, v.index == tg
+			end
+		end
+		-- The Along the way list's goals (along steps, pinned quests: #644).
+		if Engine.GetAlong and Engine.AlongGoal then
+			for _, s in ipairs(Engine.GetAlong()) do
+				for _, v in ipairs(s.goals) do
+					local goal = Engine.AlongGoal(v.step, v.index)
+					local regions = goal and goal.map and goal.spots and regionsOf(goal)
+					local mine = target and target.stepIndex == v.step and target.goalIndex == v.index or false
+					if regions then
+						shown[#shown + 1], shown[#shown + 2] = regions, mine
+						sig[#sig + 1], sig[#sig + 2] = regions, mine
+					end
+				end
 			end
 		end
 	end

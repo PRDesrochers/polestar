@@ -1,3 +1,0 @@
--- Test fixture: made-up data in the addon's layout.
-local _, ns = ...
-ns.Items = { [900001] = { name = "Fixture Blade", slot = 13, stats = { str = 1 }, sources = {} } }

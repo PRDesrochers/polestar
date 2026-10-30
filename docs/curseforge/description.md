@@ -33,7 +33,7 @@ Around the guides it adds a 3D waypoint arrow that walks real paths and a travel
 
 - **A 3D waypoint arrow** points at the current goal, with distance and ETA, and knows every place a target spawns: a click moves it on to the next one.
 - **Real paths:** the arrow walks you round cliffs, walls and water, through town gates, into caves and down the Undercity's lifts, on Polestar's walking maps with a router that started from the routing engine of Cillian Berragan's [Shortest Path Forever](https://github.com/cjber/shortest-path-forever), used with his kind permission. Walks keep to roads where they are not much longer, stay out of the other faction's towns and go round zones far above your level; the route style (Fastest, Balanced or Roads) is yours to pick. With Shortest Path Forever itself installed, Polestar still guides; **Hand guiding to Shortest Path Forever** (Options, Integrations) hands it the guiding instead, so the two never guide at once.
-- **The travel planner** uses known flight paths, boats, zeppelins, the tram, lifts, portals, class teleports and your Hearthstone when they are faster, with boats and zeppelins on their real timetables, each leg with its own caption and time ("Fly to Crossroads", "Take The Great Lift, average wait 0:15").
+- **The travel planner** uses known flight paths, boats, zeppelins, the tram, lifts, portals, class teleports and your Hearthstone when they are faster, with boats and zeppelins on their real timetables, each leg with its own caption and time ("Fly to Crossroads", "Ride the elevator down, average wait 0:15").
 - **Quest markers** for givers, objectives and turn-ins on the world map and the minimap, with tooltip lines on the mobs and items a quest needs and nameplate icons on the mobs you still need.
 - **Upgrade advice** on item tooltips and on the quest reward panel: by how much an item is an upgrade for your spec at your level, and which reward to take.
 - **Class training reminders** every two levels, with the nearest trainer of your class.
@@ -128,13 +128,13 @@ Write leveling guides of your own? Polestar's guide format, compiler, checks, pl
 
 Polestar is in beta. Every guide compiles, lints and plays to the end in a simulator for every race and class it serves, but nothing has been play-tested end to end on Forever yet. Forever's new 30-60 content (Riverglades, Shen'dralas, Mount Hyjal) is not in any data yet; the routes will take it in once it is.
 
-A step in the wrong order, or a quest that is not where the guide says? Please tell us on the [Polestar Discord](https://discord.gg/vMbee6F2e9) or [open an issue on GitHub](https://github.com/fitzforge/polestar/issues), with the guide, the step and what you saw. `/console scriptErrors 1` shows Lua errors.
+A step in the wrong order, or a quest that is not where the guide says? Please tell us on the [Polestar Discord](https://discord.gg/polestar) or [open an issue on GitHub](https://github.com/fitzforge/polestar/issues), with the guide, the step and what you saw. `/console scriptErrors 1` shows Lua errors.
 
 ---
 
 ## Links
 
-- **Discord:** [Polestar | Leveling Guides](https://discord.gg/vMbee6F2e9), for questions and reports
+- **Discord:** [Polestar | Leveling Guides](https://discord.gg/polestar), for questions and reports
 - **Source code:** [github.com/fitzforge/polestar](https://github.com/fitzforge/polestar)
 - **Issues:** [report a wrong step or a bug](https://github.com/fitzforge/polestar/issues)
 - **Changelog:** [CHANGELOG.md](https://github.com/fitzforge/polestar/blob/main/CHANGELOG.md)
