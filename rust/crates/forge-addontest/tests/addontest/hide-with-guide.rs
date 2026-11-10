@@ -34,7 +34,7 @@ fn hiding_the_guide_hides_the_quest_item_hearthstone_target_rare_and_bag_buttons
 		Polestar.QoL.Space = { Low = function() return true end, Junk = function() return { id = 900 } end, Armed = function() return false end, Free = function() return 1 end }
 		local function shown()
 			stub.runTimers()
-			emit({ PolestarQuestItemButton:IsShown(), PolestarHearthButton:IsShown(), PolestarTargetButton:IsShown(), PolestarRareButton:IsShown(), PolestarBagButton:IsShown() })
+			emit({ PolestarQuestItemButton:IsShown(), PolestarHearthButton:IsShown(), (PolestarTargetButton:IsShown() or PolestarTargetAnchor:IsShown()), PolestarRareButton:IsShown(), PolestarBagButton:IsShown() })
 		end
 		Polestar.Fire("BAG_SPACE")
 		shown()

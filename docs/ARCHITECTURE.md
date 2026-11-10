@@ -4386,7 +4386,8 @@ Polestar.QuestDB.GetQuest(id)  -> { id, title, level, minLevel, races, classes, 
 Polestar.QuestDB.GetNpc(id) / GetObject(id) -> { id, name, spawns = { { map, x, y, r (yd), f } } } | nil
 Polestar.QuestDB.GetItem(id)   -> { id, name, droppers = { { id, name, chance } }, objects = { ... }, vendors = { { id, name } } } | nil
 Polestar.QuestDB.GetItemDroppers(itemID) -> { { id, name, chance }, ... } | nil   -- best chance first
-Polestar.QuestDB.GetObjectiveMobs(questID, oi) -> { name, ... } | nil            -- kill target or item droppers
+Polestar.QuestDB.GetObjectiveMobs(questID, oi) -> { name, ... }, { { id, chance }, ... } | nil  -- kill target or item droppers;
+                                    -- the second list runs beside the names (chance only for droppers)
 Polestar.QuestDB.CheckAvailable(id, ctx, isDone, isOn, opts) -> ok, reason      -- opts: lowLevel, levelAbove, skillRank
 Polestar.QuestDB.EachAvailabilityRef(id, fn) -> needsSkill                       -- fn(q) per quest whose done/in-log state CheckAvailable reads
 Polestar.QuestDB.GetAvailableQuests() -> { questID, ... } ; IsAvailable(q) ; WhyUnavailable(q) -> reason | nil
@@ -4882,6 +4883,50 @@ A left-click that finds no living target reports the NPC name through
 `UIErrorsFrame` (chat fallback), before navigation can reuse the button.
 The overlay sets `type1`, so a Shift-, Ctrl- or Alt-click runs no macro: it
 is only the ordinary row click, with no report and no mark-cycle advance.
+
+### Target list
+
+The target button (`QoL/Buttons.lua`) shows its names (`Buttons.TargetNames`)
+as rows beside it: up to `MAX_ROWS` (8) secure buttons,
+`PolestarTargetRow1..8`, made in the button's secure apply as a list first
+needs them (out of combat, so a player in Simple mode or with short lists
+never carries the rest), of which `qol.targetRows` (default 5) show, anchored
+to the button on its name's side (`qol.buttonTextSide`, left or else right).
+While they show, the button itself is hidden (its `CLICK PolestarTargetButton`
+binding still runs its macro, like the step key's) and `PolestarTargetAnchor`,
+a small insecure Polestar mark in its slot, is the set's drag handle and on a
+right-click opens Options > Questing > Buttons (`SHOW_OPTIONS "buttons"`, also
+`/polestar options buttons`). The rows are the button's names, so on a step
+with no mob they are its NPC goals' NPCs, and the While you're here rows' mobs
+follow the step's own. Each row's macro is `Buttons.TargetMacro({ name }, 1,
+Buttons.MarkLine(target.kind), ping)`, the ping (`Buttons.QuestPingLine`) for
+mobs only, like the button's; a release advances the shared mark cycle like
+the button. With the list on, `qol.targetPlate` has nothing to paint (the
+button is hidden), so its option is greyed out unless `qol.targetSimple`.
+Names, macros and visibility change only with the button's own secure apply,
+so in combat the rows keep the last list until `PLAYER_REGEN_ENABLED`; the
+rare button moves down by as many slots as the rows need (`rowSpan`).
+`Buttons.TargetInfo` gives each name's creature id, the collect item and its
+drop chance (`QuestDB.GetObjectiveMobs`'s second value, `GetItemDroppers`);
+the row shows the item, its tooltip the chance too. A row's count ("3/8") is
+its first goal's `progress` of kind `count`; it is plain text, repainted on
+every refresh outside the signature, so it follows kills and loot in combat.
+The face is plain textures and a `PlayerModel`, so it changes in combat: the
+creature's model by id (`SetCreature`, portrait zoom) over a crosshair, which
+stays visible while the client has not loaded the model; without an id, a
+close mob's own portrait (`SetPortraitTexture`). The crosshair is green, and
+the row gets a faint green wash, while a living mob of that name is close (the
+target or a nameplate unit; secret values are passed over; `UNIT_HEALTH`
+catches one dying), red otherwise. A left-click on the mark folds the list
+(`QoL.State().targetFolded`, per character; applied with the rows, so in a
+fight it waits): row 1 then runs the whole list's macro, like the button,
+keeps the names that macro holds (`r.names`) and shows the first of them that
+is close, else the first, repainting its text and face in combat. A macro
+holds only about four names, so the first of the whole list that comes close
+(`target.foldFirst`) is put first in a new macro: out of combat a frame later
+(`QoL.Coalesce`, never from inside a secure run), in a fight once it ends. The
+button itself keeps the list's order; `qol.targetSimple` (off by default)
+hides the rows and brings back the cycle on each click.
 
 ### Quest reward marks — QoL, reads Gear
 
