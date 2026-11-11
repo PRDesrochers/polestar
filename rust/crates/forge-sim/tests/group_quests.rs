@@ -142,3 +142,44 @@ fn the_size_reads_the_elites_count_level_and_rank() {
 	assert_eq!(size_of(&[mob(60.0, 2, 1.0)], 55.0).0, REFUSE_SIZE, "a rare elite five over (Teremus) is never taken");
 	assert_eq!(size_of(&[], 40.0).0, 2, "elite work the data does not place");
 }
+
+/// The Human world with quest `kid` (a solo quest of the set) made one the game offers only while
+/// `parent` is in the log, as a correction's `parent` makes it (forge-world build: `in_log`).
+fn with_log_parent(kid: u32, parent: u32) -> (forge_world::World, forge_world::Rules) {
+	let mut world = common::world(Faction::Alliance);
+	let q = world.quests.iter_mut().find(|q| q.id == kid).expect("the quest in the Human world");
+	q.in_log = Some(i64::from(parent));
+	q.pre.retain(|&p| p != i64::from(parent));
+	q.pre_all.retain(|&p| p != i64::from(parent));
+	let rules = forge_world::Rules::new(&world, "Human", None, false);
+	(world, rules)
+}
+
+/// A solo quest of the Human set other than Hogger's, needing nothing of his family.
+fn a_solo_quest(rules: &forge_world::Rules) -> u32 {
+	*rules.open.keys().find(|&&id| id != HOGGER_QUEST && rules.solo_ok(id)).expect("a solo quest")
+}
+
+#[test]
+fn a_quest_offered_only_while_an_elite_quest_is_in_the_log_is_group_work_of_its_family() {
+	// #1705: the Tattered Spellbook offers Old Habits only while Defeat Nek'rosh, an elite group
+	// quest, is in the log, so a player who skips the elite can never take it.
+	let world = common::world(Faction::Alliance);
+	let kid = a_solo_quest(&forge_world::Rules::new(&world, "Human", None, false));
+	let (world, rules) = with_log_parent(kid, HOGGER_QUEST);
+	assert!(rules.is_group(kid) && !rules.solo_ok(kid), "{kid} needs Hogger's quest in the log: group work");
+	let g = families(&world, &rules, &data());
+	assert_eq!(g.family(kid).map(|f| f.root), Some(HOGGER_QUEST), "{kid} is on Hogger's group branch");
+}
+
+#[test]
+fn a_quest_offered_only_while_a_solo_quest_is_in_the_log_stays_solo() {
+	// (Henchman Valik's errand needs Krusk's Infiltration in the log: neither is group work.)
+	let world = common::world(Faction::Alliance);
+	let base = forge_world::Rules::new(&world, "Human", None, false);
+	let parent = a_solo_quest(&base);
+	let kid = *base.open.keys().find(|&&id| id != HOGGER_QUEST && id != parent && base.solo_ok(id)).expect("a second solo quest");
+	let (world, rules) = with_log_parent(kid, parent);
+	assert!(rules.solo_ok(kid) && rules.solo_ok(parent), "{kid} under {parent}: both solo");
+	assert!(families(&world, &rules, &data()).family(kid).is_none(), "{kid} in no family");
+}

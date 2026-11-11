@@ -239,7 +239,9 @@ impl Rules {
 			}
 			excl.insert(id, q.excl.iter().copied().filter(|&e| has(&open, e)).collect::<Vec<_>>());
 		}
-		// Group work: elite, and every quest needing one (qGroup's fixed point, in id order).
+		// Group work: elite, and every quest needing one (qGroup's fixed point, in id order): by its
+		// prerequisites, or as the quest it needs in the log (`parent`: Old Habits, offered only while
+		// Defeat Nek'rosh is in the log, #1705).
 		let mut group: FxHashSet<u32> = open.iter().filter(|(_, &i)| world.quests[i].elite).map(|(&id, _)| id).collect();
 		let mut changed = true;
 		while changed {
@@ -251,7 +253,7 @@ impl Rules {
 				let g = |p: &i64| u32::try_from(*p).is_ok_and(|p| group.contains(&p));
 				let ps = &pre[&id];
 				let any = !ps.is_empty() && ps.iter().all(g);
-				let all = pre_all[&id].iter().any(g) || world.quests[i].after.iter().flatten().any(|c| open.contains_key(c) && group.contains(c));
+				let all = pre_all[&id].iter().any(g) || parent.get(&id).is_some_and(g) || world.quests[i].after.iter().flatten().any(|c| open.contains_key(c) && group.contains(c));
 				if any || all {
 					group.insert(id);
 					changed = true;

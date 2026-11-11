@@ -479,7 +479,7 @@ pub const KINDS: [&str; 14] = [
 	"other",
 ];
 
-const QUEST_FIELDS: [&str; 22] = [
+const QUEST_FIELDS: [&str; 23] = [
 	"title",
 	"level",
 	"minLevel",
@@ -492,6 +492,7 @@ const QUEST_FIELDS: [&str; 22] = [
 	"preAll",
 	"excl",
 	"next",
+	"parent",
 	"objectives",
 	"objectiveText",
 	"zone",
@@ -817,7 +818,7 @@ fn check_corrections(ck: &mut Ck, c: &V) {
 					}
 				}
 				"pre" | "preAny" | "preAll" | "excl" | "breadcrumbs" => ck.ids(&a, "quests", &v),
-				"next" | "breadcrumbFor" => {
+				"next" | "parent" | "breadcrumbFor" => {
 					if !v.is_nullish() {
 						ck.refers(&a, "quests", &v);
 					}
@@ -1656,6 +1657,15 @@ mod tests {
 		assert_eq!(findings(Some(&format!(r#"{{ "quests": {{ "10": {{ "set": {{ "limit": 600 }}, {src} }} }} }}"#)), None, None), Vec::<String>::new());
 		let bad = findings(Some(&format!(r#"{{ "quests": {{ "10": {{ "set": {{ "limit": "10 min" }}, {src} }}, "11": {{ "set": {{ "limit": 1.5 }}, {src} }} }} }}"#)), None, None);
 		assert_eq!(bad.len(), 2, "{bad:?}");
+	}
+
+	#[test]
+	fn a_quest_needed_in_the_log_is_its_parent() {
+		// #1705: the Tattered Spellbook offers Old Habits only while Defeat Nek'rosh is in the log.
+		let src = r#""source": { "kind": "in-game-check", "ref": "issue 1705" }, "note": "only while 11 is in the log""#;
+		assert_eq!(findings(Some(&format!(r#"{{ "quests": {{ "10": {{ "set": {{ "parent": 11 }}, {src} }} }} }}"#)), None, None), Vec::<String>::new());
+		let f = findings(Some(&format!(r#"{{ "quests": {{ "10": {{ "set": {{ "parent": 77 }}, {src} }} }} }}"#)), None, None);
+		assert!(f.iter().any(|x| x.contains("no quest 77 in the data")), "{f:#?}");
 	}
 
 	#[test]
