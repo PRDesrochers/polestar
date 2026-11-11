@@ -1926,6 +1926,25 @@ test(`Bennistrov's report: This Land Was Their Land is taken only after Defeat N
 	assert.equal(seen, 2, 'one accept and one hand-in');
 });
 
+// --- Wetlands (julesbruu, #1705): the Tattered Spellbook offers Old Habits (98223) only while Defeat Nek'rosh (474)
+// is in the log. 0.3.6 sent every player to it, including those who skip the elite chieftain (solo) and those who
+// never had Nek'rosh's Gambit (465) handed in, for whom the guide already hides Defeat Nek'rosh.
+test(`julesbruu's report: Old Habits is taken only while Defeat Nek'rosh is in the log, on its group branch (#1705)`, { skip }, () => {
+	let seen = 0;
+	for (const guide of allGuides()) {
+		const list = goals(guide);
+		for (const { step, goal } of list.filter(({ goal }) => goal.quest === 98223)) {
+			seen++;
+			assert.ok((step.when || []).some((p) => p.k === 'group' && [p.q].flat().includes(474) && !p.neg), `${guide}: ${goal.t} 98223 is under when group 474`);
+		}
+		const take = list.findIndex(({ goal }) => is('accept', 98223)(goal));
+		if (take < 0) continue;
+		assert.ok(at(list, 'accept 474', is('accept', 474)) < take, `${guide}: Defeat Nek'rosh is taken before the spellbook`);
+		assert.ok(take < at(list, 'turnin 474', is('turnin', 474)), `${guide}: and is still in the log when it is taken`);
+	}
+	assert.equal(seen, 2, 'one accept and one hand-in');
+});
+
 // --- Alliance 12-21 level ranges (Discord, 2026-11-08: a Human "usually gets cut off in Westfall around 15 and a
 // half"): #1274 set Westfall 13-17, Darkshore 17-19 and Loch Modan 19-21 from the Dwarf, Gnome, Night Elf and
 // Skyborne levels, but Humans come from Elwynn and enter about 2 lower. The level model (ReleaseAudit, 0.3.5, mean

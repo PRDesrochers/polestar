@@ -5060,6 +5060,22 @@
 		],
 		"note": "From the Ashes (Wetlands, Captain Stoutfist) is offered together with War Banners (464), not after its hand-in: both recorded characters took the two at once. Issue #225 reported that Stoutfist offered From the Ashes instead of Nek'rosh's Gambit (465) once War Banners was handed in, which is 465's prerequisite on 98221 (kept in its own correction), not a prerequisite of 98221 on 464. With the two taken together, the attack plans are fetched in the Dragonmaw camp on the walk east from the dig, and both are handed in on one Menethil stop (06-wetlands), instead of a walk back east for the plans after War Banners. Its four objectives are the four Attack Plans (objects 671481, 671486, 671483, 671487), each clicked in the camp north and north-east of the dig; the data had none (#1312)."
 	},
+	"98223": {
+		"set": {
+			"parent": 474,
+			"pre": [
+				465
+			],
+			"preAny": [
+				465
+			]
+		},
+		"source": {
+			"kind": "in-game-check",
+			"ref": "#1705 (julesbruu): the Tattered Spellbook could not be used without Defeat Nek'rosh in the log"
+		},
+		"note": "Old Habits (Wetlands) starts at the Tattered Spellbook in the Angerfang Encampment, which can be used only while Defeat Nek'rosh (474) is in the log. The merged data named no prerequisite, so the route sent every player to the book: the solo players who skip the elite chieftain (474 is group work) and the players who never handed in Nek'rosh's Gambit (465), for whom the guide already hides Defeat Nek'rosh. `parent` 474 puts it on 474's group branch; `pre` 465 is what 474 needs first, so the addon's catch-up plan leaves it out with 474 (#1705)."
+	},
 	"98230": {
 		"set": {
 			"pre": [
