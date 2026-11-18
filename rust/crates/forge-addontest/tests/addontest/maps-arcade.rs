@@ -570,3 +570,182 @@ fn every_file_of_the_game_names_its_authors_and_licence() {
 	}
 	assert!(missing.is_empty(), "files without the notice: {missing:?}");
 }
+
+// The game's keys, pressed on its window as the client does (its OnKeyDown/OnKeyUp scripts) in a level: each key
+// gives the actions it holds down while pressed ("" for none), weapon slots as "weaponN". `bind` sets the
+// character's WoW key bindings (GetBindingKey) and says so with UPDATE_BINDINGS.
+const KEYS: &str = r#"
+local bound = {}
+local function bind(t)
+	bound = t
+	stub.fire("UPDATE_BINDINGS")
+end
+function GetBindingKey(action) local k = bound[action]; if k then return unpack(k) end end
+local function play()
+	present("Polestar_Arcade", { reason = "DEMAND_LOADED" })
+	A.Play()
+	FreedoomArcade.G.InitNew(2, 1, 1)
+	return _G.Polestar_ArcadeFrame
+end
+local ACTIONS = { "forward", "back", "left", "right", "strafeleft", "straferight", "strafe", "run", "fire", "use" }
+local function press(keys)
+	local f, inp, out = _G.Polestar_ArcadeFrame, FreedoomArcade.G.input, {}
+	for _, k in ipairs(keys) do
+		inp.weapon = nil
+		f:GetScript("OnKeyDown")(f, k)
+		local held = {}
+		for _, a in ipairs(ACTIONS) do if inp[a] then held[#held + 1] = a end end
+		if inp.weapon then held[#held + 1] = "weapon" .. inp.weapon end
+		f:GetScript("OnKeyUp")(f, k)
+		for _, a in ipairs(ACTIONS) do if inp[a] then held[#held + 1] = "stuck:" .. a end end
+		inp.weapon = nil
+		out[k] = table.concat(held, ",")
+	end
+	return out
+end
+local LETTERS = { "W", "A", "S", "D", "Z", "Q", "E", "F", "SPACE", "1", "2", "3", "&", "é", "-" }
+-- WoW's AZERTY keys: ZQSD with strafing on Q/D, turning on A/E and the arrows, Space (the game's Use key) bound to
+-- moving back and P (its pause) to turning right, and the action bar on the unshifted number row, button 3 only
+-- with Shift.
+local AZERTY = {
+	MOVEFORWARD = { "Z", "UP" }, MOVEBACKWARD = { "S", "SPACE" }, STRAFELEFT = { "Q" }, STRAFERIGHT = { "D" },
+	TURNLEFT = { "A", "LEFT" }, TURNRIGHT = { "E", "RIGHT", "P" }, JUMP = { "SHIFT-Z" },
+	ACTIONBUTTON1 = { "&" }, ACTIONBUTTON2 = { "SHIFT-2", "é" }, ACTIONBUTTON3 = { "SHIFT-3" }, ACTIONBUTTON4 = { "'" },
+	ACTIONBUTTON5 = { "(" }, ACTIONBUTTON6 = { "-" }, ACTIONBUTTON7 = { "è" },
+}
+"#;
+
+// Freedoom on an AZERTY keyboard: the game takes the keys the character moves with in WoW, whatever letters they
+// are, and its weapons from action buttons 1-7; a key with a modifier, and the game's own keys (Space is Use, P
+// pauses), stay out of it. The QWERTY keys fill only what WoW leaves unbound and never take a key already in use.
+#[test]
+fn the_game_plays_with_the_characters_own_wow_keys_azerty_too() {
+	let out = run(&format!(
+		r#"{KEYS}
+		bind(AZERTY)
+		play()
+		local level = press(LETTERS)
+		local p = press({{ "P" }}).P
+		local paused = FreedoomArcade.G.paused
+		FreedoomArcade.G.paused = false
+		local AM = FreedoomArcade.AM
+		AM.Toggle()
+		local scale = AM.scale
+		local mapMinus = press({{ "-" }})["-"]
+		local zoomed = AM.scale < scale
+		AM.Toggle()
+		FreedoomArcade.G.OpenMenu()
+		local menu = FreedoomArcade.G.menu
+		menu.item = 1
+		press({{ "S" }})
+		local down = menu.item
+		press({{ "Z" }})
+		emit({{ level = level, p = p, paused = paused, mapMinus = mapMinus, zoomed = zoomed, menu = {{ down = down, up = menu.item }} }})"#
+	));
+	assert_eq!(
+		out["level"],
+		json!({
+			"Z": "forward", "S": "back", "Q": "strafeleft", "D": "straferight", "A": "left", "E": "right",
+			"W": "", "SPACE": "use", "F": "use", "&": "weapon0", "é": "weapon1", "-": "weapon5", "1": "", "2": "",
+			"3": "weapon2"
+		})
+	);
+	assert_eq!(out["p"], "", "P never turns");
+	assert_eq!(out["paused"], true, "P still pauses");
+	assert_eq!(out["mapMinus"], "", "with the automap open, - zooms rather than picking weapon 6");
+	assert_eq!(out["zoomed"], true);
+	assert_eq!(out["menu"], json!({ "down": 2, "up": 1 }));
+}
+
+// Nothing bound (or no GetBindingKey): the QWERTY keys of before. A change to the WoW keys while the game is
+// open takes effect at once and lets go of whatever was held, as does opening it again. A WoW key the game
+// can't take (Space, P, F6) leaves its action to the QWERTY key, and an action button never takes M or F.
+#[test]
+fn with_no_wow_keys_the_qwerty_keys_play_and_a_rebind_applies_at_once() {
+	let out = run(&format!(
+		r#"{KEYS}
+		play()
+		local none = press(LETTERS)
+		local f = _G.Polestar_ArcadeFrame
+		f:GetScript("OnKeyDown")(f, "W")
+		bind({{ MOVEFORWARD = {{ "I" }} }})
+		local held = FreedoomArcade.G.input.forward
+		f:GetScript("OnKeyUp")(f, "W")
+		local rebound = press({{ "I", "W", "A" }})
+		-- WoW keys the game can't take leave their action to the QWERTY key; an action button never takes M or F.
+		bind({{ MOVEBACKWARD = {{ "SPACE" }}, TURNRIGHT = {{ "P" }}, ACTIONBUTTON1 = {{ "F6" }}, ACTIONBUTTON2 = {{ "M" }}, ACTIONBUTTON3 = {{ "F" }} }})
+		local untaken = press({{ "S", "E", "1", "2", "3", "F" }})
+		local m = press({{ "M" }}).M
+		local automap = FreedoomArcade.AM.active
+		FreedoomArcade.AM.Toggle()
+		-- Opening the game again (Play while it is open) lets go of a held key too.
+		f:GetScript("OnKeyDown")(f, "S")
+		FreedoomArcadeAPI.Open()
+		local reopened = FreedoomArcade.G.input.back
+		f:GetScript("OnKeyUp")(f, "S")
+		-- Two keys for one action: it lets go when the last of them does.
+		local inp = FreedoomArcade.G.input
+		f:GetScript("OnKeyDown")(f, "W")
+		f:GetScript("OnKeyDown")(f, "UP")
+		f:GetScript("OnKeyUp")(f, "W")
+		local both = inp.forward
+		f:GetScript("OnKeyUp")(f, "UP")
+		emit({{ none = none, held = held, rebound = rebound, untaken = untaken, m = m, automap = automap, reopened = reopened, both = {{ both, inp.forward }} }})"#
+	));
+	assert_eq!(
+		out["none"],
+		json!({
+			"W": "forward", "S": "back", "A": "strafeleft", "D": "straferight", "Q": "left", "E": "right",
+			"Z": "", "SPACE": "use", "F": "use", "1": "weapon0", "2": "weapon1", "3": "weapon2", "&": "", "é": "", "-": ""
+		})
+	);
+	assert_eq!(out["held"], false, "a rebind lets go of the held key");
+	assert_eq!(out["rebound"], json!({ "I": "forward", "W": "", "A": "strafeleft" }));
+	assert_eq!(out["untaken"], json!({ "S": "back", "E": "right", "1": "weapon0", "2": "weapon1", "3": "weapon2", "F": "use" }));
+	assert_eq!(out["m"], "", "M is still the automap");
+	assert_eq!(out["automap"], true);
+	assert_eq!(out["reopened"], false, "opening the game again lets go of the held key");
+	assert_eq!(out["both"], json!([true, false]), "forward holds while Up is still down");
+}
+
+// /arcade keys azerty|qwerty sets the letters whatever WoW has, and is saved; /arcade keys wow goes back to the
+// character's keys; anything else changes nothing and says what it takes. A saved mode this version doesn't know
+// (a later version's) plays as wow.
+#[test]
+fn arcade_keys_sets_azerty_or_qwerty_over_the_wow_keys_and_saves_it() {
+	let out = run(&format!(
+		r#"{KEYS}
+		bind({{ MOVEFORWARD = {{ "I" }} }})
+		Polestar_ArcadeDB = {{ keys = "a-later-mode" }}
+		play()
+		local slash = SlashCmdList.FREEDOOMARCADE
+		slash("keys")
+		local stale = press({{ "I", "W" }})
+		slash("keys azerty")
+		local azerty = press({{ "Z", "Q", "S", "D", "A", "E", "W", "I", "1" }})
+		slash("keys QWERTY")
+		local qwerty = press({{ "W", "A", "Q", "Z", "I" }})
+		local saved = Polestar_ArcadeDB.keys
+		slash("keys dvorak")
+		local kept = Polestar_ArcadeDB.keys
+		slash("keys wow")
+		emit({{ stale = stale, azerty = azerty, qwerty = qwerty, saved = saved, kept = kept, wow = press({{ "I", "W" }}), last = Polestar_ArcadeDB.keys, chat = chat() }})"#
+	));
+	assert_eq!(out["azerty"], json!({ "Z": "forward", "Q": "strafeleft", "S": "back", "D": "straferight", "A": "left", "E": "right", "W": "", "I": "", "1": "weapon0" }));
+	assert_eq!(out["qwerty"], json!({ "W": "forward", "A": "strafeleft", "Q": "left", "Z": "", "I": "" }));
+	assert_eq!(out["stale"], json!({ "I": "forward", "W": "" }), "a mode this version doesn't know plays as wow");
+	assert_eq!(out["saved"], "qwerty");
+	assert_eq!(out["kept"], "qwerty");
+	assert_eq!(out["wow"], json!({ "I": "forward", "W": "" }));
+	assert_eq!(out["last"], "wow");
+	assert_eq!(
+		out["chat"],
+		json!([
+			"Freedoom Arcade: keys: wow (the keys your character moves with)",
+			"Freedoom Arcade: keys: azerty (ZQSD, A/E turn)",
+			"Freedoom Arcade: keys: qwerty (WASD, Q/E turn)",
+			"Freedoom Arcade: /doom keys wow|qwerty|azerty - wow: the keys your character moves with",
+			"Freedoom Arcade: keys: wow (the keys your character moves with)"
+		])
+	);
+}

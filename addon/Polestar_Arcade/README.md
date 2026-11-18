@@ -49,14 +49,18 @@ The `FreedoomArcade_E*` addons hold the map data and load on demand when you ent
 
 Type `/arcade` (or `/freedoom`, `/arcade`) in game.
 
+The letter keys are the ones your character moves with in WoW, so any keyboard
+layout plays the way it does in WoW. The table shows the keys with nothing bound
+in WoW (and `/arcade keys qwerty`); `/arcade keys azerty` plays on ZQSD.
+
 | Action | Keys |
 |---|---|
-| Move | W / S |
-| Strafe | A / D |
-| Turn | arrows or Q / E, or hold right mouse and drag |
+| Move | W / S, or your WoW move forward / backward keys |
+| Strafe | A / D, or your WoW strafe keys |
+| Turn | arrows or Q / E, or your WoW turn keys, or hold right mouse and drag |
 | Fire | Ctrl or left click |
 | Use | Space or F |
-| Weapons | 1 – 7 |
+| Weapons | 1 – 7, or your WoW action button 1 – 7 keys |
 | Walk (always-run is on) | Shift |
 | Pause | P |
 | Automap | Tab or M (zoom with + / - or mouse wheel) |
@@ -76,6 +80,7 @@ Slash commands:
 - `/arcade save <1-5>` / `/arcade load <1-5>` use five named save slots.
 - Minimap button: left-click opens or closes the game. Right-click opens a menu with quick save/load and the five save slots, each showing its map and time. Drag the button to move it.
 - `/arcade minimap` shows or hides the minimap button.
+- `/arcade keys wow|qwerty|azerty` picks the letter keys: `wow` (the default) uses the keys your character moves with and the keys of action buttons 1 – 7, `qwerty` plays on WASD with Q / E to turn, `azerty` on ZQSD with A / E to turn. `/arcade keys` says which is on.
 - `/arcade aggro` toggles pause-on-aggro (on by default). When your character enters combat, the game quick-saves, pauses and closes so the keyboard goes back to WoW. `/arcade` brings it back, and P resumes.
 
 ## Releasing

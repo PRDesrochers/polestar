@@ -8,7 +8,7 @@ local floor = math.floor
 local UI = {}
 D.UI = UI
 
-local defaults = { width = 800, detail = "high", alwaysRun = true, mouseSens = 1.0, sound = true, showFPS = false, aggroPause = true }
+local defaults = { width = 800, detail = "high", alwaysRun = true, mouseSens = 1.0, sound = true, showFPS = false, aggroPause = true, keys = "wow" }
 local db
 
 local frame, view, title, fpsText
@@ -88,16 +88,89 @@ function UI.QuickLoad() return UI.LoadSlot("quick") end
 local inp = G.input
 local held = {}
 
-local bindings = {
-	W = "forward", UP = "forward",
-	S = "back", DOWN = "back",
-	A = "strafeleft", D = "straferight",
-	LEFT = "left", RIGHT = "right", Q = "left", E = "right",
-	LCTRL = "fire", RCTRL = "fire",
-	SPACE = "use", F = "use",
-	LSHIFT = "run", RSHIFT = "run",
-	LALT = "strafe", RALT = "strafe",
+-- The arrows, Ctrl, Space, Shift and Alt always do the same, and the game's
+-- command keys (Esc, Enter, Tab, P, Pause, F6, F9) are never taken. The
+-- letters and weapon keys come from db.keys: "wow" takes the keys the
+-- character moves with in WoW and those of action buttons 1-7, so a French,
+-- Belgian or any other keyboard plays as it does in WoW, with the QWERTY
+-- letters filling whatever no WoW key took; "qwerty" and "azerty" set them.
+-- A WoW movement key may take M (automap) and F (use); a weapon key may not.
+local ACTIONS = { "forward", "back", "left", "right", "strafeleft", "straferight", "strafe", "run", "fire", "use" }
+local FIXED = {
+	UP = "forward", DOWN = "back", LEFT = "left", RIGHT = "right",
+	LCTRL = "fire", RCTRL = "fire", SPACE = "use",
+	LSHIFT = "run", RSHIFT = "run", LALT = "strafe", RALT = "strafe",
 }
+local COMMANDS = { ESCAPE = true, ENTER = true, TAB = true, P = true, PAUSE = true, F6 = true, F9 = true }
+local NOT_WEAPONS = { M = true, F = true }
+local LETTERS = {
+	qwerty = { forward = { "W" }, back = { "S" }, strafeleft = { "A" }, straferight = { "D" }, left = { "Q" }, right = { "E" }, use = { "F" } },
+	azerty = { forward = { "Z" }, back = { "S" }, strafeleft = { "Q" }, straferight = { "D" }, left = { "A" }, right = { "E" }, use = { "F" } },
+}
+-- Weapon slots 0-6: the number row, and on AZERTY also its unshifted characters.
+local WEAPONS = {
+	qwerty = { { "1" }, { "2" }, { "3" }, { "4" }, { "5" }, { "6" }, { "7" } },
+	azerty = { { "1", "&" }, { "2", "\195\169" }, { "3", '"' }, { "4", "'" }, { "5", "(" }, { "6", "-" }, { "7", "\195\168" } },
+}
+local WOW = { forward = "MOVEFORWARD", back = "MOVEBACKWARD", strafeleft = "STRAFELEFT", straferight = "STRAFERIGHT", left = "TURNLEFT", right = "TURNRIGHT" }
+local MODIFIERS = { ALT = true, CTRL = true, SHIFT = true, META = true }
+UI.KEYS_HELP = "/doom keys wow|qwerty|azerty - wow: the keys your character moves with"
+UI.KEYS = { wow = "the keys your character moves with", qwerty = "WASD, Q/E turn", azerty = "ZQSD, A/E turn" }
+
+-- key -> an action of ACTIONS, or a weapon slot 0-6
+local keymap = {}
+
+local function free(key)
+	return keymap[key] == nil and not FIXED[key] and not COMMANDS[key]
+end
+
+-- The unmodified keys bound to a WoW binding (a key held with Shift is the
+-- game's run, so SHIFT-2 is never weapon 2).
+local function wowKeys(binding)
+	local out = {}
+	if not GetBindingKey then return out end
+	for _, key in ipairs({ GetBindingKey(binding) }) do
+		local mod = type(key) == "string" and key:match("^(%u+)%-.")
+		if type(key) == "string" and not (mod and MODIFIERS[mod]) then out[#out + 1] = key end
+	end
+	return out
+end
+
+local function buildKeys()
+	for k in pairs(keymap) do keymap[k] = nil end
+	local mode = db and UI.KEYS[db.keys] and db.keys or "wow"
+	local fromWow = {}
+	if mode == "wow" then
+		for action, binding in pairs(WOW) do
+			for _, key in ipairs(wowKeys(binding)) do
+				if free(key) then keymap[key] = action; fromWow[action] = true end
+			end
+		end
+		for slot = 0, 6 do
+			for _, key in ipairs(wowKeys("ACTIONBUTTON" .. (slot + 1))) do
+				if free(key) and not NOT_WEAPONS[key] then keymap[key] = slot; fromWow[slot] = true end
+			end
+		end
+	end
+	for action, keys in pairs(LETTERS[mode] or LETTERS.qwerty) do
+		if not fromWow[action] then
+			for _, key in ipairs(keys) do
+				if free(key) then keymap[key] = action end
+			end
+		end
+	end
+	for slot, keys in ipairs(WEAPONS[mode] or WEAPONS.qwerty) do
+		if not fromWow[slot - 1] then
+			for _, key in ipairs(keys) do
+				if free(key) then keymap[key] = slot - 1 end
+			end
+		end
+	end
+end
+
+local function actionOf(key)
+	return FIXED[key] or keymap[key]
+end
 
 local function setAction(action, down)
 	inp[action] = down
@@ -106,27 +179,24 @@ end
 local function OnKeyDown(self, key)
 	if held[key] then return end
 	held[key] = true
+	local action = actionOf(key)
 	if G.state == "level" and not G.paused then
-		local action = bindings[key]
-		if action then
+		if type(action) == "string" then
 			setAction(action, true)
 			return
 		end
-		local n = tonumber(key)
-		if n and n >= 1 and n <= 7 then
-			inp.weapon = n - 1
-			return
-		end
-		if key == "F6" then
+		if D.AM.active and (key == "=" or key == "+" or key == "EQUALS" or key == "NUMPADPLUS") then
+			D.AM.Zoom(1)
+		elseif D.AM.active and (key == "-" or key == "MINUS" or key == "NUMPADMINUS") then
+			D.AM.Zoom(-1)
+		elseif action then
+			inp.weapon = action
+		elseif key == "F6" then
 			UI.QuickSave()
 		elseif key == "F9" then
 			UI.QuickLoad()
 		elseif key == "TAB" or key == "M" then
 			D.AM.Toggle()
-		elseif D.AM.active and (key == "=" or key == "+" or key == "EQUALS" or key == "NUMPADPLUS") then
-			D.AM.Zoom(1)
-		elseif D.AM.active and (key == "-" or key == "MINUS" or key == "NUMPADMINUS") then
-			D.AM.Zoom(-1)
 		elseif key == "ESCAPE" then
 			G.OpenMenu()
 		elseif key == "P" or key == "PAUSE" then
@@ -147,8 +217,8 @@ local function OnKeyDown(self, key)
 		if UI.QuickLoad() then return end
 	end
 	if G.state == "menu" then
-		if key == "UP" or key == "W" then G.MenuKey("up")
-		elseif key == "DOWN" or key == "S" then G.MenuKey("down")
+		if action == "forward" then G.MenuKey("up")
+		elseif action == "back" then G.MenuKey("down")
 		elseif key == "ENTER" or key == "SPACE" or key == "LCTRL" then G.MenuKey("enter")
 		elseif key == "ESCAPE" or key == "BACKSPACE" then
 			if G.menu.page == "main" and G.menuReturn ~= "level" then
@@ -166,22 +236,33 @@ local function OnKeyDown(self, key)
 	-- intermission / finale
 	if key == "ESCAPE" and G.state == "finale" then
 		G.state = "title"
-	elseif bindings[key] == "use" or bindings[key] == "fire" or key == "ENTER" then
+	elseif action == "use" or action == "fire" or key == "ENTER" then
 		G.Continue()
 	end
 end
 
+-- An action lets go when its last held key does (W and Up both move forward).
 local function OnKeyUp(self, key)
 	held[key] = nil
-	local action = bindings[key]
-	if action then setAction(action, false) end
+	local action = actionOf(key)
+	if type(action) ~= "string" then return end
+	for k in pairs(held) do
+		if actionOf(k) == action then return end
+	end
+	setAction(action, false)
 end
 
 local function clearInput()
 	for k in pairs(held) do held[k] = nil end
-	for _, action in pairs(bindings) do inp[action] = false end
+	for _, action in ipairs(ACTIONS) do inp[action] = false end
 	inp.mousex = 0
 	looking = false
+end
+
+-- The keys again (a new /doom keys, or the WoW keys changed): nothing stays held.
+function UI.ApplyKeys()
+	clearInput()
+	buildKeys()
 end
 
 ------------------------------------------------------------------------ loop
@@ -317,6 +398,7 @@ function UI.IsOpen() return frame ~= nil and frame:IsShown() end
 
 function UI.Open()
 	if not frame then createFrame() end
+	UI.ApplyKeys()
 	frame:Show()
 	running = true
 	accumulator = 0
@@ -358,6 +440,7 @@ local function help()
 	D.Print("/doom save <1-5> | load <1-5> - save slots (also on the minimap button's right-click menu)")
 	D.Print("/doom aggro - toggle auto save + pause when you enter combat")
 	D.Print("/doom minimap - show or hide the minimap button")
+	D.Print(UI.KEYS_HELP)
 end
 
 -- A copy inside another addon leaves the commands to the standalone addon when that one has them.
@@ -399,6 +482,16 @@ SlashCmdList.FREEDOOMARCADE = function(msg)
 		if cmd == "save" then UI.SaveSlot(slot) else UI.LoadSlot(slot) end
 	elseif cmd == "minimap" then
 		D.Minimap.Toggle()
+	elseif cmd == "keys" then
+		if UI.KEYS[arg] then
+			db.keys = arg
+			UI.ApplyKeys()
+		end
+		if UI.KEYS[arg] or arg == "" then
+			D.Print("keys: " .. db.keys .. " (" .. UI.KEYS[db.keys] .. ")")
+		else
+			D.Print(UI.KEYS_HELP)
+		end
 	elseif cmd == "aggro" then
 		db.aggroPause = not db.aggroPause
 		D.Print("pause on aggro: " .. (db.aggroPause and "on" or "off"))
@@ -445,7 +538,9 @@ local loader = CreateFrame("Frame")
 loader:RegisterEvent("ADDON_LOADED")
 loader:RegisterEvent("PLAYER_REGEN_DISABLED")
 loader:RegisterEvent("PLAYER_REGEN_ENABLED")
+loader:RegisterEvent("UPDATE_BINDINGS")
 loader:SetScript("OnEvent", function(self, event, name)
+	if event == "UPDATE_BINDINGS" then return UI.ApplyKeys() end
 	if event == "PLAYER_REGEN_DISABLED" then return UI.OnAggro() end
 	if event == "PLAYER_REGEN_ENABLED" then return UI.OnCombatEnd() end
 	if name ~= D.ADDON then return end
@@ -456,6 +551,7 @@ loader:SetScript("OnEvent", function(self, event, name)
 	for k, v in pairs(defaults) do
 		if db[k] == nil then db[k] = v end
 	end
+	if not UI.KEYS[db.keys] then db.keys = defaults.keys end
 	-- A copy inside another addon is opened from that addon: its minimap button starts hidden.
 	if db.minimapHidden == nil and not D.STANDALONE then db.minimapHidden = true end
 	G.alwaysRun = db.alwaysRun
